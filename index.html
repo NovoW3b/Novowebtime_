@@ -20,7 +20,7 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-13145333507"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gta1g() {
+      function gtag() {
         dataLayer.push(arguments);
       }
       gtag("js", new Date());
@@ -1015,7 +1015,6 @@
           const lsKey = `lastVisit_${ip}`;
           const lastTs = parseInt(localStorage.getItem(lsKey) || "0", 10);
           if (Date.now() - lastTs < 30 * 60 * 1000) {
-            console.debug("[trackVisitor] visita ignorada (mesmo IP < 30min)", { ip });
             return;
           }
           localStorage.setItem(lsKey, String(Date.now()));
@@ -1031,10 +1030,8 @@
             accessedAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
 
-          console.debug("[trackVisitor] visita registrada", { ip, country, city });
-        } catch (err) {
+        } catch (_) {
           // Silencioso: erros de tracking não devem quebrar a página
-          console.warn("[trackVisitor] Não foi possível registrar visita:", err.message);
         }
       }
 
