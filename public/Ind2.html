@@ -1,0 +1,3925 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NovoWeb — Viso</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <link rel="stylesheet" href="design.css" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png" />
+    <link rel="shortcut icon" href="favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+    <link rel="manifest" href="favicon/site.webmanifest" />
+
+    <!-- Contato admin carregado via Cloud Function (não fica exposto no HTML) -->
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      />
+    </noscript>
+  </head>
+  <body>
+    <!-- ===================== GLOBAL: Abstract Blob Background ===================== -->
+    <div class="bg-blobs" aria-hidden="true">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+      <div class="blob blob-4"></div>
+    </div>
+
+    <!-- ===================== VIEW: CLIENTE (Login) ===================== -->
+    <div id="clientLoginView" class="view-container active">
+      <div class="login-page">
+        <div class="login-card">
+          <div class="login-logo">NovoWeb</div>
+          <h2 class="login-title">Relatório do Projeto</h2>
+          <p class="login-subtitle">
+            Insira o código de acesso enviado pela equipe NovoWeb para visualizar o andamento do seu
+            projeto.
+          </p>
+          <div class="form-group">
+            <label>
+              Código de Acesso
+              <span class="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="accessCodeInput"
+              placeholder="Ex: A1B2C3"
+              maxlength="10"
+              autocomplete="off"
+              style="
+                text-transform: uppercase;
+                letter-spacing: 3px;
+                text-align: center;
+                font-size: 18px;
+              "
+            />
+          </div>
+          <button class="btn btn-primary btn-full" id="accessBtn">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            Acessar Relatório
+          </button>
+          <div id="accessError" class="access-error hidden"></div>
+          <div class="login-footer">
+            <button class="btn-link" id="goToAdminBtn">
+              <i class="fa-solid fa-user-shield"></i>
+              Área Administrativa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: CLIENTE (Relatório) ===================== -->
+    <div id="clientReportView" class="view-container">
+      <header class="report-header">
+        <div class="report-header-left">
+          <div class="sidebar-logo">NovoWeb</div>
+          <span class="report-badge">Viso</span>
+        </div>
+        <div class="report-header-right">
+          <button class="theme-toggle" id="themeToggleClient" aria-label="Alternar tema">
+            <i id="themeIconClient" class="fa-solid fa-moon"></i>
+          </button>
+          <button class="btn btn-outline btn-small" id="clientLogoutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span class="btn-text">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-content">
+        <!-- Project Info Card -->
+        <div class="project-info-card" id="clientProjectInfo">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-header">
+            <span class="progress-label">Progresso Geral</span>
+            <span class="progress-value" id="clientProgressValue">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="clientProgressFill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Task Summary Cards -->
+        <div class="task-summary-cards" id="clientSummaryCards">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Status Filters -->
+        <div class="status-filters" id="clientStatusFilters">
+          <button class="filter-btn active" data-filter="all">
+            <i class="fa-solid fa-list"></i>
+            Todas
+          </button>
+          <button class="filter-btn" data-filter="planejado">
+            <i class="fa-solid fa-clipboard-list"></i>
+            Planejado
+          </button>
+          <button class="filter-btn" data-filter="em-andamento">
+            <i class="fa-solid fa-spinner"></i>
+            Em Andamento
+          </button>
+          <button class="filter-btn" data-filter="concluido">
+            <i class="fa-solid fa-circle-check"></i>
+            Concluído
+          </button>
+          <button class="filter-btn" data-filter="corrigir">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Corrigir
+          </button>
+        </div>
+
+        <!-- Tasks List (Client View) -->
+        <div class="tasks-list" id="clientTasksList">
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fa-solid fa-inbox"></i></div>
+            <div class="empty-state-text">Nenhuma tarefa encontrada</div>
+          </div>
+        </div>
+
+        <!-- Admin Notes (read-only for client) -->
+        <div class="notes-section" id="clientNotesSection" style="display: none">
+          <div class="section-header-small">
+            <i class="fa-solid fa-message"></i>
+            Observações da Equipe
+          </div>
+          <div class="notes-content" id="clientNotesContent"></div>
+        </div>
+
+        <footer class="footer">© 2025 NovoWeb — Viso</footer>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: ADMIN (Login) ===================== -->
+    <div id="adminLoginView" class="view-container">
+      <div class="login-page">
+        <div class="login-card">
+          <div class="login-logo">NovoWeb</div>
+          <h2 class="login-title">Área Administrativa</h2>
+          <p class="login-subtitle">Gerencie os relatórios dos seus clientes.</p>
+          <div class="form-group">
+            <label>
+              E-mail
+              <span class="required">*</span>
+            </label>
+            <input type="email" id="adminEmailInput" placeholder="email@exemplo.com" />
+          </div>
+          <div class="form-group">
+            <label>
+              Senha
+              <span class="required">*</span>
+            </label>
+            <input type="password" id="adminPasswordInput" placeholder="Senha administrativa" />
+          </div>
+          <button class="btn btn-primary btn-full" id="adminLoginBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Entrar
+          </button>
+          <div class="login-footer">
+            <button class="btn-link" id="backToClientBtn">
+              <i class="fa-solid fa-arrow-left"></i>
+              Voltar para acesso do cliente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: ADMIN (Dashboard) ===================== -->
+    <div id="adminDashboardView" class="view-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo-wrap">
+            <div class="sidebar-logo" id="sidebarLogo" style="cursor: pointer">NovoWeb</div>
+            <span class="sidebar-logo-sub">Viso</span>
+          </div>
+        </div>
+
+        <!-- Fixed top: reports label -->
+        <div class="sidebar-top">
+          <div class="sidebar-section-title">
+            <i class="fa-solid fa-folder-open"></i>
+            Relatórios
+          </div>
+        </div>
+
+        <!-- Scrollable reports list -->
+        <div class="sidebar-scroll">
+          <div id="sidebarReportsList" class="sidebar-reports-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Fixed bottom: nav + button -->
+        <div class="sidebar-bottom">
+          <div class="sidebar-nav">
+            <button class="sidebar-nav-item active" id="navReportsBtn" data-page="reports">
+              <i class="fa-solid fa-folder-open"></i>
+              <span>Viso</span>
+            </button>
+            <button class="sidebar-nav-item" id="navImportBtn" data-page="import">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Importar</span>
+              <span class="nav-badge">IA</span>
+            </button>
+            <button class="sidebar-nav-item" id="navResumoBtn" data-page="resumo">
+              <i class="fa-solid fa-chart-simple"></i>
+              <span>Resumo</span>
+            </button>
+          </div>
+          <div class="sidebar-actions-inline">
+            <button class="btn btn-primary btn-small" id="newReportBtn">
+              <i class="fa-solid fa-plus"></i>
+              <span class="btn-text">Novo Viso</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <header class="header">
+          <div class="header-mobile-logo">
+            <div class="sidebar-logo">NovoWeb</div>
+            <span class="sidebar-logo-sub">Viso</span>
+          </div>
+          <div class="header-title" id="adminHeaderTitle">Painel de Relatórios</div>
+          <div class="header-controls">
+            <div class="stat-badge" id="adminStatBadge">
+              <span id="reportCount">0 relatórios</span>
+            </div>
+            <button class="theme-toggle" id="themeToggleAdmin" aria-label="Alternar tema">
+              <i id="themeIconAdmin" class="fa-solid fa-moon"></i>
+            </button>
+            <button class="btn btn-outline btn-small" id="adminLogoutBtn">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span class="btn-text">Sair</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="container">
+          <!-- Empty state when no report selected -->
+          <div id="adminEmptyState" class="admin-empty-state">
+            <div class="empty-state-icon" style="font-size: 64px; margin-bottom: 20px">
+              <i class="fa-solid fa-file-lines"></i>
+            </div>
+            <h2 style="margin-bottom: 8px; font-weight: 500">Selecione ou crie um relatório</h2>
+            <p style="color: var(--muted); font-size: 14px; margin-bottom: 24px">
+              Use o botão "Novo Viso" na barra lateral ou importe um arquivo .md com IA.
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center">
+              <button class="btn btn-primary" id="emptyNewReportBtn">
+                <i class="fa-solid fa-plus"></i>
+                Novo Viso
+              </button>
+              <button class="btn btn-outline" id="emptyImportMdBtn">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Importar .md com IA
+              </button>
+            </div>
+          </div>
+
+          <!-- ========== RESUMO / DASHBOARD PAGE ========== -->
+          <div id="resumoPage" class="resumo-page hidden">
+            <!-- Header -->
+            <div class="resumo-header">
+              <div>
+                <h2 class="resumo-page-title">Resumo Geral</h2>
+                <p class="resumo-page-subtitle">Visão consolidada de todos os projetos e tarefas</p>
+              </div>
+            </div>
+
+            <!-- 4 stat cards -->
+            <div class="resumo-cards-grid">
+              <div class="resumo-card resumo-card--blue">
+                <div class="resumo-card-icon"><i class="fa-solid fa-folder-open"></i></div>
+                <div>
+                  <div class="resumo-card-value" id="totalReports">0</div>
+                  <div class="resumo-card-label">Relatórios</div>
+                </div>
+              </div>
+              <div class="resumo-card resumo-card--green">
+                <div class="resumo-card-icon"><i class="fa-solid fa-circle-dot"></i></div>
+                <div>
+                  <div class="resumo-card-value" id="activeReports">0</div>
+                  <div class="resumo-card-label">Em Andamento</div>
+                </div>
+              </div>
+              <div class="resumo-card resumo-card--amber">
+                <div class="resumo-card-icon"><i class="fa-solid fa-list-check"></i></div>
+                <div>
+                  <div class="resumo-card-value" id="totalTasks">0</div>
+                  <div class="resumo-card-label">Total de Tarefas</div>
+                </div>
+              </div>
+              <div class="resumo-card resumo-card--green">
+                <div class="resumo-card-icon"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                  <div class="resumo-card-value" id="completedTasks">0</div>
+                  <div class="resumo-card-label">Concluídas</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom row: progress + task breakdown + recent projects -->
+            <div class="resumo-bottom-grid">
+              <!-- Progresso geral -->
+              <div class="resumo-section-card resumo-progress-card">
+                <div class="resumo-section-title">
+                  <i class="fa-solid fa-gauge-high"></i>
+                  Progresso Geral
+                </div>
+                <div class="resumo-progress-ring-wrap">
+                  <svg class="resumo-ring" viewBox="0 0 120 120">
+                    <circle class="resumo-ring-bg" cx="60" cy="60" r="50" />
+                    <circle
+                      class="resumo-ring-fill"
+                      id="resumoRingFill"
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      stroke-dasharray="314 314"
+                      stroke-dashoffset="314"
+                      transform="rotate(-90 60 60)"
+                    />
+                  </svg>
+                  <div class="resumo-ring-center">
+                    <span class="resumo-ring-pct" id="resumoRingPct">0%</span>
+                    <span class="resumo-ring-sub">concluídas</span>
+                  </div>
+                </div>
+                <p class="resumo-progress-hint" id="resumoProgressHint">
+                  0 de 0 tarefas concluídas
+                </p>
+              </div>
+
+              <!-- Distribuição por status -->
+              <div class="resumo-section-card">
+                <div class="resumo-section-title">
+                  <i class="fa-solid fa-chart-bar"></i>
+                  Tarefas por Status
+                </div>
+                <div class="resumo-status-bars" id="resumoStatusBars">
+                  <!-- JS populated -->
+                </div>
+              </div>
+
+              <!-- Projetos recentes -->
+              <div class="resumo-section-card resumo-projects-card">
+                <div class="resumo-section-title">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                  Projetos Recentes
+                </div>
+                <div class="resumo-projects-list" id="resumoProjectsList">
+                  <!-- JS populated -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========== IMPORT MD PAGE ========== -->
+          <div id="importMdPage" class="import-md-page hidden">
+            <div class="import-md-header">
+              <div>
+                <h1 class="import-md-title">
+                  <i class="fa-solid fa-file-import"></i>
+                  Importar Tarefas
+                </h1>
+                <p class="import-md-subtitle">
+                  Cole suas anotações no formato estruturado — o sistema extrai tarefas e status
+                  automaticamente, sem precisar de IA externa.
+                </p>
+              </div>
+            </div>
+
+            <div class="ai-status-indicator" id="aiStatusIndicator">
+              <div class="ai-status-dot" style="background: #03fa6e"></div>
+              <span id="aiStatusLabel">Parser pronto</span>
+            </div>
+
+            <!-- Drop Zone (Large) -->
+            <div class="import-drop-area">
+              <div class="dropzone dropzone-large" id="dropZoneMain">
+                <div class="dropzone-content">
+                  <div class="dropzone-icon">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                  </div>
+                  <div class="dropzone-title">Arraste seus arquivos .md aqui</div>
+                  <div class="dropzone-subtitle">
+                    Aceita .md, .txt e .markdown — ou clique para selecionar
+                  </div>
+                  <div class="dropzone-formats">
+                    <span class="format-tag">
+                      <i class="fa-solid fa-file-code"></i>
+                      .md
+                    </span>
+                    <span class="format-tag">
+                      <i class="fa-solid fa-file-lines"></i>
+                      .txt
+                    </span>
+                    <span class="format-tag">
+                      <i class="fa-solid fa-file"></i>
+                      .markdown
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    id="mdFileInput"
+                    accept=".md,.txt,.markdown"
+                    class="dropzone-file-input"
+                    multiple
+                  />
+                </div>
+                <div class="dropzone-hover-overlay">
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                  <span>Solte o arquivo aqui</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="import-divider">
+              <span class="import-divider-line"></span>
+              <span class="import-divider-text">ou cole diretamente</span>
+              <span class="import-divider-line"></span>
+            </div>
+
+            <!-- Paste Area (Always Visible) -->
+            <div class="import-paste-section">
+              <div class="import-paste-header">
+                <label class="import-paste-label">
+                  <i id="pasteSectionIcon" class="fa-solid fa-paste"></i>
+                  <span id="pasteSectionTitle">Colar Markdown</span>
+                </label>
+                <div class="import-paste-actions">
+                  <button class="btn btn-outline btn-small" id="clearPasteBtn" title="Limpar">
+                    <i class="fa-solid fa-eraser"></i>
+                  </button>
+                  <button
+                    class="btn btn-outline btn-small"
+                    id="loadExampleBtn"
+                    title="Carregar exemplo"
+                  >
+                    <i class="fa-solid fa-lightbulb"></i>
+                    Exemplo
+                  </button>
+                  <button
+                    class="btn btn-outline btn-small"
+                    id="toggleConverterBtn"
+                    title="Converter texto detalhado no formato estruturado"
+                  >
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Converter</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Editor de cole -->
+              <div id="pasteEditorSection">
+                <div class="import-paste-editor">
+                  <textarea
+                    id="pasteMdTextarea"
+                    placeholder="Cole aqui no formato estruturado...
+
+Exemplo:
+
+Nome da Tarefa
+Status: Concluído
+Descrição opcional da tarefa
+
+Outra Tarefa
+Status: Em andamento
+Descrição opcional
+
+Tarefa Futura
+Status: Planejando
+
+---
+Separe cada tarefa com uma linha em branco.
+Status aceitos: Concluído | Em andamento | Planejando | Corrigir"
+                    rows="20"
+                  ></textarea>
+                  <div class="import-paste-footer">
+                    <div class="char-count">
+                      <span id="charCount">0</span>
+                      caracteres
+                    </div>
+                    <button class="btn btn-primary" id="processPastedMdBtn">
+                      <i class="fa-solid fa-list-check"></i>
+                      Processar Texto
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- /pasteEditorSection -->
+
+              <!-- ===== PAINEL: CONVERTER TEXTO ===== -->
+              <div id="converterPanel" class="hidden">
+                <div class="import-paste-editor">
+                  <div class="converter-split">
+                    <!-- Esquerda: entrada -->
+                    <textarea
+                      id="converterInput"
+                      rows="20"
+                      placeholder="Cole aqui qualquer texto detalhado...
+
+Exemplos aceitos:
+• Relatórios em markdown com ## e ###
+• Itens com ✅ (concluído) e ⚠️ (em andamento)
+• Seções como 'Próximos passos', 'Em andamento'
+• Qualquer texto com títulos e listas"
+                    ></textarea>
+
+                    <!-- Divisor vertical com botão -->
+                    <div class="converter-vdivider">
+                      <button class="converter-run-btn" id="converterRunBtn" title="Converter">
+                        <i class="fa-solid fa-arrow-right"></i>
+                      </button>
+                    </div>
+
+                    <!-- Direita: saída -->
+                    <textarea
+                      id="converterOutput"
+                      class="converter-output-area"
+                      readonly
+                      rows="20"
+                      placeholder="O resultado aparecerá aqui..."
+                    ></textarea>
+                  </div>
+
+                  <div class="import-paste-footer">
+                    <div class="char-count">
+                      <span id="converterInputCount">0</span>
+                      caracteres
+                    </div>
+                    <button class="btn btn-primary" id="converterUseBtn">
+                      <i class="fa-solid fa-check"></i>
+                      Usar aqui
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- /converterPanel -->
+            </div>
+
+            <!-- Recent Imports -->
+            <div class="import-recent-section" id="recentImportsSection">
+              <div class="section-header-small">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Importações Recentes
+              </div>
+              <div id="recentImportsList" class="recent-imports-list">
+                <div class="empty-state" style="padding: 16px">
+                  <div class="empty-state-text">Nenhuma importação realizada ainda</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- How it Works: Colar Markdown -->
+            <div class="import-howto" id="howtoImport">
+              <div class="section-header-small" style="margin-bottom: 16px">
+                <i class="fa-solid fa-circle-question"></i>
+                Como funciona?
+              </div>
+              <div class="howto-steps">
+                <div class="howto-step">
+                  <div class="howto-step-number">1</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Arraste ou cole</div>
+                    <div class="howto-step-desc">
+                      Arraste um arquivo .md ou cole suas anotações na caixa de texto
+                    </div>
+                  </div>
+                </div>
+                <div class="howto-step">
+                  <div class="howto-step-number">2</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Parser analisa</div>
+                    <div class="howto-step-desc">
+                      O sistema lê o formato estruturado e extrai tarefas e status automaticamente
+                    </div>
+                  </div>
+                </div>
+                <div class="howto-step">
+                  <div class="howto-step-number">3</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Revise e confirme</div>
+                    <div class="howto-step-desc">
+                      Você pode editar qualquer campo antes de criar o relatório
+                    </div>
+                  </div>
+                </div>
+                <div class="howto-step">
+                  <div class="howto-step-number">4</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Pronto!</div>
+                    <div class="howto-step-desc">
+                      Relatório criado com código de acesso para enviar ao cliente
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- How it Works: Conversor de Texto -->
+            <div class="import-howto hidden" id="howtoConverter">
+              <div class="section-header-small" style="margin-bottom: 16px">
+                <i class="fa-solid fa-circle-question"></i>
+                Como funciona?
+              </div>
+              <div class="howto-steps">
+                <div class="howto-step">
+                  <div class="howto-step-number">1</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Cole o texto bruto</div>
+                    <div class="howto-step-desc">
+                      Coloque qualquer relatório ou anotação em markdown no lado esquerdo
+                    </div>
+                  </div>
+                </div>
+                <div class="howto-step">
+                  <div class="howto-step-number">2</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Clique na seta</div>
+                    <div class="howto-step-desc">
+                      O conversor analisa os headers ##/###, ✅ e ⚠️ e gera o formato estruturado
+                    </div>
+                  </div>
+                </div>
+                <div class="howto-step">
+                  <div class="howto-step-number">3</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Revise a saída</div>
+                    <div class="howto-step-desc">
+                      Confira as tarefas geradas no lado direito e ajuste se necessário
+                    </div>
+                  </div>
+                </div>
+                <div class="howto-step">
+                  <div class="howto-step-number">4</div>
+                  <div class="howto-step-content">
+                    <div class="howto-step-title">Usar aqui</div>
+                    <div class="howto-step-desc">
+                      Clique em “Usar aqui” para enviar o texto convertido ao campo de importação
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- /importMdPage -->
+
+          <!-- Report Editor (hidden by default) -->
+          <div id="reportEditor" class="report-editor hidden">
+            <!-- Project Info (editable) -->
+            <section class="editor-section">
+              <div class="section-header">
+                <h1 class="section-title" id="editorProjectName">Novo Viso</h1>
+                <div class="editor-actions-top">
+                  <button
+                    class="btn btn-outline btn-small"
+                    id="copyLinkBtn"
+                    title="Copiar link do cliente"
+                  >
+                    <i class="fa-solid fa-link"></i>
+                    Copiar Link
+                  </button>
+                  <button
+                    class="btn btn-outline btn-small"
+                    id="sendWhatsAppBtn"
+                    title="Enviar link via WhatsApp"
+                  >
+                    <i class="fa-brands fa-whatsapp"></i>
+                    WhatsApp
+                  </button>
+                  <button
+                    class="btn btn-outline btn-small"
+                    id="previewReportBtn"
+                    title="Visualizar como cliente"
+                  >
+                    <i class="fa-solid fa-eye"></i>
+                    Preview
+                  </button>
+                  <button
+                    class="btn btn-outline btn-small btn-danger"
+                    id="deleteReportBtn"
+                    title="Apagar relatório"
+                  >
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Project Details Form -->
+              <div class="editor-grid">
+                <div class="form-group">
+                  <label>
+                    Nome do Projeto
+                    <span class="required">*</span>
+                  </label>
+                  <input type="text" id="editProjectName" placeholder="Ex: Site da Empresa X" />
+                </div>
+                <div class="form-group">
+                  <label>Tipo de Projeto</label>
+                  <select id="editProjectType">
+                    <option value="site">Site</option>
+                    <option value="sistema">Sistema</option>
+                    <option value="app">Aplicativo</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>
+                    Nome do Cliente
+                    <span class="required">*</span>
+                  </label>
+                  <input type="text" id="editClientName" placeholder="Nome do cliente" />
+                </div>
+                <div class="form-group">
+                  <label>E-mail do Cliente</label>
+                  <input type="email" id="editClientEmail" placeholder="email@cliente.com" />
+                </div>
+                <div class="form-group">
+                  <label>Telefone do Cliente</label>
+                  <input type="tel" id="editClientPhone" placeholder="(00) 00000-0000" />
+                </div>
+                <div class="form-group">
+                  <label>Status do Projeto</label>
+                  <select id="editProjectStatus">
+                    <option value="em-andamento">Em Andamento</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="pausado">Pausado</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Prazo de Entrega</label>
+                  <input type="date" id="editDeadline" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Observações para o Cliente</label>
+                <textarea
+                  id="editNotes"
+                  placeholder="Escreva observações que o cliente poderá visualizar..."
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Código de Acesso do Cliente</label>
+                <div class="access-code-display">
+                  <span id="displayAccessCode" class="access-code-text">------</span>
+                  <button
+                    class="btn btn-outline btn-small"
+                    id="regenerateCodeBtn"
+                    title="Gerar novo código"
+                  >
+                    <i class="fa-solid fa-rotate"></i>
+                  </button>
+                  <button class="btn btn-outline btn-small" id="copyCodeBtn" title="Copiar código">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button class="btn btn-primary" id="saveReportBtn">
+                <i class="fa-solid fa-floppy-disk"></i>
+                Salvar Relatório
+              </button>
+            </section>
+
+            <!-- Tasks Section -->
+            <section class="editor-section">
+              <div class="section-header">
+                <h2 class="section-title" style="font-size: 20px">Tarefas do Projeto</h2>
+                <button class="btn btn-primary btn-small" id="addTaskBtn">
+                  <i class="fa-solid fa-plus"></i>
+                  Nova Tarefa
+                </button>
+              </div>
+
+              <!-- Progress in editor -->
+              <div class="progress-section" style="margin-bottom: 20px">
+                <div class="progress-header">
+                  <span class="progress-label">Progresso</span>
+                  <span class="progress-value" id="adminProgressValue">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="adminProgressFill" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <!-- Task Filters -->
+              <div class="status-filters" id="adminTaskFilters">
+                <button class="filter-btn active" data-filter="all">
+                  <i class="fa-solid fa-list"></i>
+                  Todas
+                </button>
+                <button class="filter-btn" data-filter="planejado">
+                  <i class="fa-solid fa-clipboard-list"></i>
+                  Planejado
+                </button>
+                <button class="filter-btn" data-filter="em-andamento">
+                  <i class="fa-solid fa-spinner"></i>
+                  Em Andamento
+                </button>
+                <button class="filter-btn" data-filter="concluido">
+                  <i class="fa-solid fa-circle-check"></i>
+                  Concluído
+                </button>
+                <button class="filter-btn" data-filter="corrigir">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                  Corrigir
+                </button>
+              </div>
+
+              <!-- Tasks List -->
+              <div id="adminTasksList" class="tasks-list">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                  <div class="empty-state-text">Nenhuma tarefa adicionada</div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Mobile sidebar -->
+          <div class="mobile-sidebar-content">
+            <div class="sidebar-section">
+              <div class="sidebar-section-title">
+                <i class="fa-solid fa-chart-simple"></i>
+                Resumo
+              </div>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-number" id="totalReportsMobile">0</div>
+                  <div class="stat-label">Relatórios</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number" id="activeReportsMobile">0</div>
+                  <div class="stat-label">Ativos</div>
+                </div>
+              </div>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-title">
+                <i class="fa-solid fa-folder-open"></i>
+                Relatórios
+              </div>
+              <div id="sidebarReportsListMobile" class="sidebar-reports-list"></div>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-actions-inline">
+                <button class="btn btn-primary btn-small" id="newReportBtnMobile">
+                  <i class="fa-solid fa-plus"></i>
+                  Novo Viso
+                </button>
+                <button class="btn btn-outline btn-small" id="importMdBtnMobile">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  Importar .md com IA
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <footer class="footer">© 2025 NovoWeb — Viso</footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== MODAL: IA Processing ===================== -->
+    <div class="modal-overlay" id="aiModalOverlay">
+      <div class="modal ai-modal">
+        <button class="modal-close" id="aiModalClose" aria-label="Fechar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <!-- Step 1: Processing -->
+        <div id="aiStep1" class="ai-step">
+          <div class="ai-processing-animation">
+            <div class="ai-brain-icon">
+              <i class="fa-solid fa-brain"></i>
+            </div>
+            <div class="ai-pulse-ring"></div>
+          </div>
+          <h2 class="modal-title" style="text-align: center">IA Processando...</h2>
+          <p class="ai-status-text" id="aiStatusText">Analisando conteúdo do Markdown...</p>
+          <div class="ai-progress-bar">
+            <div class="ai-progress-fill" id="aiProgressFill"></div>
+          </div>
+        </div>
+
+        <!-- Step 2: Preview -->
+        <div id="aiStep2" class="ai-step hidden">
+          <h2 class="modal-title">
+            <i class="fa-solid fa-list-check" style="color: var(--accent)"></i>
+            Tarefas Extraídas
+          </h2>
+          <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px">
+            Revise os dados extraídos e escolha como salvar.
+          </p>
+
+          <!-- Destination Toggle: New or Existing -->
+          <div class="ai-destination-toggle">
+            <button type="button" class="ai-dest-btn active" data-dest="new" id="aiDestNewBtn">
+              <i class="fa-solid fa-plus"></i>
+              Criar Novo Viso
+            </button>
+            <button type="button" class="ai-dest-btn" data-dest="existing" id="aiDestExistingBtn">
+              <i class="fa-solid fa-folder-open"></i>
+              Adicionar a Existente
+            </button>
+          </div>
+
+          <!-- Option: Select existing report -->
+          <div id="aiExistingSection" class="ai-existing-section hidden">
+            <div class="form-group">
+              <label>
+                <i class="fa-solid fa-file-lines"></i>
+                Selecione o Relatório
+              </label>
+              <select id="aiExistingReportSelect">
+                <option value="">— Selecione um relatório —</option>
+              </select>
+            </div>
+            <div id="aiExistingInfo" class="ai-existing-info hidden">
+              <i class="fa-solid fa-circle-info"></i>
+              <span id="aiExistingInfoText">
+                As tarefas serão adicionadas ao relatório selecionado.
+              </span>
+            </div>
+          </div>
+
+          <!-- Option: New report fields -->
+          <div id="aiNewSection" class="ai-preview">
+            <div class="editor-grid">
+              <div class="form-group">
+                <label>Nome do Projeto</label>
+                <input type="text" id="aiProjectName" />
+              </div>
+              <div class="form-group">
+                <label>Tipo</label>
+                <select id="aiProjectType">
+                  <option value="site">Site</option>
+                  <option value="sistema">Sistema</option>
+                  <option value="app">Aplicativo</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nome do Cliente</label>
+                <input type="text" id="aiClientName" />
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select id="aiProjectStatus">
+                  <option value="em-andamento">Em Andamento</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="pausado">Pausado</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Observações</label>
+              <textarea id="aiNotes" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="ai-tasks-preview">
+            <div class="section-header-small" style="margin-bottom: 12px">
+              <i class="fa-solid fa-list-check"></i>
+              Tarefas Extraídas (
+              <span id="aiTaskCount">0</span>
+              )
+            </div>
+            <div id="aiTasksPreviewList" class="ai-tasks-list"></div>
+          </div>
+
+          <div class="modal-buttons" style="margin-top: 20px">
+            <button type="button" class="btn btn-outline" id="aiCancelBtn">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="aiConfirmBtn">
+              <i class="fa-solid fa-check"></i>
+              <span id="aiConfirmBtnText">Criar Relatório</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Error -->
+        <div id="aiStepError" class="ai-step hidden">
+          <div class="ai-error-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <h2 class="modal-title" style="text-align: center; color: #dc2626">Erro na IA</h2>
+          <p class="ai-error-text" id="aiErrorText">Ocorreu um erro ao processar.</p>
+          <div class="modal-buttons" style="margin-top: 20px">
+            <button type="button" class="btn btn-outline" id="aiErrorCloseBtn">Fechar</button>
+            <button type="button" class="btn btn-primary" id="aiRetryBtn">
+              <i class="fa-solid fa-rotate"></i>
+              Tentar Novamente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== MODAL: Nova Tarefa ===================== -->
+    <div class="modal-overlay" id="taskModalOverlay">
+      <div class="modal task-modal">
+        <button class="modal-close" id="taskModalClose" aria-label="Fechar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="task-modal-header">
+          <div class="task-modal-icon"><i class="fa-solid fa-list-check"></i></div>
+          <h2 class="modal-title" id="taskModalTitle">Nova Tarefa</h2>
+        </div>
+
+        <form id="taskForm">
+          <div class="form-group">
+            <label>
+              Título da Tarefa
+              <span class="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="taskTitle"
+              placeholder="Ex: Desenvolver página inicial"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea
+              id="taskDescription"
+              placeholder="Descreva o que será feito nesta tarefa..."
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select id="taskStatus" style="display: none">
+              <option value="planejado">Planejado</option>
+              <option value="em-andamento">Em Andamento</option>
+              <option value="concluido">Concluído</option>
+              <option value="corrigir">Corrigir</option>
+            </select>
+            <div class="status-selector" id="statusSelector">
+              <button
+                type="button"
+                class="status-opt status-opt--planejado active"
+                data-value="planejado"
+              >
+                <span class="status-opt-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                <span class="status-opt-label">Planejado</span>
+              </button>
+              <button
+                type="button"
+                class="status-opt status-opt--andamento"
+                data-value="em-andamento"
+              >
+                <span class="status-opt-icon"><i class="fa-solid fa-spinner"></i></span>
+                <span class="status-opt-label">Em Andamento</span>
+              </button>
+              <button type="button" class="status-opt status-opt--concluido" data-value="concluido">
+                <span class="status-opt-icon"><i class="fa-solid fa-circle-check"></i></span>
+                <span class="status-opt-label">Concluído</span>
+              </button>
+              <button type="button" class="status-opt status-opt--corrigir" data-value="corrigir">
+                <span class="status-opt-icon">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+                <span class="status-opt-label">Corrigir</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="modal-buttons">
+            <button type="button" class="btn btn-outline" id="taskCancelBtn">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="taskSubmitBtn">
+              Adicionar Tarefa
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===================== PREVIEW MODAL ===================== -->
+    <div class="modal-overlay" id="previewModalOverlay">
+      <div class="preview-modal">
+        <div class="preview-modal-bar">
+          <div class="preview-modal-label">
+            <i class="fa-solid fa-eye"></i>
+            Visualização do Cliente
+          </div>
+          <button class="btn btn-outline btn-small" id="closePreviewBtn">
+            <i class="fa-solid fa-xmark"></i>
+            Fechar
+          </button>
+        </div>
+        <div id="previewModalContent" class="preview-modal-content"></div>
+      </div>
+    </div>
+
+    <!-- ===================== TOAST ===================== -->
+    <div class="success-message" id="successMessage">
+      <i class="fa-solid fa-circle-check"></i>
+      <span id="successText">Salvo com sucesso!</span>
+    </div>
+
+    <!-- ===================== SCRIPT ===================== -->
+    <script>
+      // ========== FIREBASE CONFIG ==========
+      const firebaseConfig = {
+        apiKey: "AIzaSyBgEpXaK1qozTT_xdwbMd4YBeXtzqm0BaE",
+        authDomain: "viso-novoweb.firebaseapp.com",
+        projectId: "viso-novoweb",
+        storageBucket: "viso-novoweb.firebasestorage.app",
+        messagingSenderId: "787611833898",
+        appId: "1:787611833898:web:95314fd72cc15b902d5553",
+        measurementId: "G-S0YVX77YJE",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      // ========== STATE ==========
+      let isAdmin = false;
+      const ADMIN_PASSWORD = atob("Tm92b1dlYl8wMjAy");
+
+      let reports = [];
+      let currentReportId = null;
+      let currentReport = null;
+      let editingTaskId = null;
+      let currentFilter = "all";
+      let clientReport = null;
+      let unsubscribeReports = null;
+      let unsubscribeClientReport = null;
+      let _snapshotTimer = null; // debounce handle
+      let _lastReportUpdatedAt = null; // track if current report actually changed
+      let _plannedKanbanClr = null; // cached CSS variable
+
+      // ========== INITIALIZATION ==========
+      document.addEventListener("DOMContentLoaded", () => {
+        initializeTheme();
+
+        // Check URL hash for direct access
+        handleRoute();
+        window.addEventListener("hashchange", handleRoute);
+
+        // Check saved admin session
+        if (localStorage.getItem("nw_relatorios_admin") === "1") {
+          isAdmin = true;
+          showView("adminDashboardView");
+          startAdminListener();
+        }
+
+        setupEventListeners();
+      });
+
+      // ========== ROUTING ==========
+      function handleRoute() {
+        const hash = window.location.hash;
+
+        if (hash.startsWith("#relatorio/")) {
+          const code = hash.replace("#relatorio/", "").toUpperCase().trim();
+          if (code) {
+            loadClientReport(code);
+            return;
+          }
+        }
+
+        if (hash === "#admin") {
+          if (isAdmin) {
+            showView("adminDashboardView");
+            startAdminListener();
+          } else {
+            showView("adminLoginView");
+          }
+          return;
+        }
+      }
+
+      // ========== VIEW MANAGEMENT ==========
+      function showView(viewId) {
+        document.querySelectorAll(".view-container").forEach((v) => v.classList.remove("active"));
+        const view = document.getElementById(viewId);
+        if (view) view.classList.add("active");
+      }
+
+      // ========== THEME ==========
+      function initializeTheme() {
+        const savedTheme = localStorage.getItem("nw_relatorios_theme");
+        if (savedTheme === "light") {
+          document.documentElement.classList.remove("dark-mode");
+        } else {
+          document.documentElement.classList.add("dark-mode");
+        }
+        updateAllThemeIcons();
+      }
+
+      function toggleTheme() {
+        document.documentElement.classList.toggle("dark-mode");
+        const isDark = document.documentElement.classList.contains("dark-mode");
+        localStorage.setItem("nw_relatorios_theme", isDark ? "dark" : "light");
+        _plannedKanbanClr = null; // invalidate cached CSS variable (changes per theme)
+        updateAllThemeIcons();
+      }
+
+      function updateAllThemeIcons() {
+        const isDark = document.documentElement.classList.contains("dark-mode");
+        const iconClass = isDark ? "fa-solid fa-sun" : "fa-solid fa-moon";
+        ["themeIconClient", "themeIconAdmin"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.className = iconClass;
+        });
+      }
+
+      // ========== ACCESS CODE GENERATION ==========
+      function generateAccessCode() {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      }
+
+      // ========== CLIENT ACCESS ==========
+      function loadClientReport(rawCode) {
+        // Normalizar em todas as entradas: trim + maiúsculo
+        const code = String(rawCode || "")
+          .trim()
+          .toUpperCase();
+
+        const errorEl = document.getElementById("accessError");
+        if (errorEl) {
+          errorEl.classList.add("hidden");
+          errorEl.textContent = "";
+        }
+
+        if (!code) {
+          if (errorEl) {
+            errorEl.textContent = "Informe o código de acesso.";
+            errorEl.classList.remove("hidden");
+          }
+          return;
+        }
+
+        // Clean up previous listener
+        if (unsubscribeClientReport) {
+          unsubscribeClientReport();
+          unsubscribeClientReport = null;
+        }
+
+        // Query Firestore for report with this access code
+        unsubscribeClientReport = db
+          .collection("relatorios")
+          .where("accessCode", "==", code)
+          .onSnapshot(
+            (snapshot) => {
+              if (snapshot.empty) {
+                showView("clientLoginView");
+                if (errorEl) {
+                  errorEl.textContent = "Código de acesso inválido. Verifique e tente novamente.";
+                  errorEl.classList.remove("hidden");
+                }
+                return;
+              }
+
+              const doc = snapshot.docs[0];
+              clientReport = { id: doc.id, ...doc.data() };
+
+              renderClientReport();
+              showView("clientReportView");
+              window.location.hash = `relatorio/${code}`;
+            },
+            (err) => {
+              console.error("Erro ao buscar relatório:", err);
+              if (errorEl) {
+                errorEl.textContent = "Erro de conexão. Verifique sua internet e tente novamente.";
+                errorEl.classList.remove("hidden");
+              }
+            },
+          );
+      }
+
+      function renderClientReport() {
+        if (!clientReport) return;
+
+        const r = clientReport;
+        const tasks = r.tasks || [];
+
+        // Project Info
+        const typeLabels = { site: "Site", sistema: "Sistema", app: "Aplicativo", outro: "Outro" };
+        const statusLabels = {
+          "em-andamento": "Em Andamento",
+          concluido: "Concluído",
+          pausado: "Pausado",
+        };
+        const statusIcons = {
+          "em-andamento": "fa-spinner fa-spin-pulse",
+          concluido: "fa-circle-check",
+          pausado: "fa-pause",
+        };
+
+        const infoEl = document.getElementById("clientProjectInfo");
+        infoEl.innerHTML = `
+          <div class="project-info-header">
+            <div>
+              <h1 class="project-name">${escapeHtml(r.projectName || "Projeto")}</h1>
+              <p class="project-client">
+                <i class="fa-solid fa-user"></i> ${escapeHtml(r.clientName || "")}
+              </p>
+            </div>
+            <div class="project-badges">
+              <span class="badge badge-type">
+                <i class="fa-solid fa-code"></i> ${typeLabels[r.projectType] || "Projeto"}
+              </span>
+              <span class="badge badge-status badge-${r.status || "em-andamento"}">
+                <i class="fa-solid ${statusIcons[r.status] || "fa-spinner"}"></i>
+                ${statusLabels[r.status] || "Em Andamento"}
+              </span>
+              ${r.deadline ? `<span class="badge badge-deadline"><i class="fa-solid fa-calendar-days"></i> Prazo: ${formatDeadlineDate(r.deadline)}</span>` : ""}
+            </div>
+          </div>
+        `;
+
+        // Progress
+        const total = tasks.length;
+        const done = tasks.filter((t) => t.status === "concluido").length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+        document.getElementById("clientProgressValue").textContent = `${pct}%`;
+        document.getElementById("clientProgressFill").style.width = `${pct}%`;
+        document.getElementById("clientProgressFill").className =
+          `progress-fill ${pct === 100 ? "complete" : ""}`;
+
+        // Summary cards
+        const planned = tasks.filter((t) => t.status === "planejado").length;
+        const inProgress = tasks.filter((t) => t.status === "em-andamento").length;
+        const toFix = tasks.filter((t) => t.status === "corrigir").length;
+
+        document.getElementById("clientSummaryCards").innerHTML = `
+          <div class="summary-card summary-planned summary-card--clickable" onclick="scrollToKanbanCol('planejado')">
+            <div class="summary-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div class="summary-number">${planned}</div>
+            <div class="summary-label">Planejado</div>
+          </div>
+          <div class="summary-card summary-progress summary-card--clickable" onclick="scrollToKanbanCol('em-andamento')">
+            <div class="summary-icon"><i class="fa-solid fa-spinner"></i></div>
+            <div class="summary-number">${inProgress}</div>
+            <div class="summary-label">Em Andamento</div>
+          </div>
+          <div class="summary-card summary-done summary-card--clickable" onclick="scrollToKanbanCol('concluido')">
+            <div class="summary-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="summary-number">${done}</div>
+            <div class="summary-label">Concluído</div>
+          </div>
+          <div class="summary-card summary-fix summary-card--clickable" onclick="scrollToKanbanCol('corrigir')">
+            <div class="summary-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="summary-number">${toFix}</div>
+            <div class="summary-label">Corrigir</div>
+          </div>
+        `;
+
+        // Notes
+        const notesSection = document.getElementById("clientNotesSection");
+        const notesContent = document.getElementById("clientNotesContent");
+        if (r.notes && r.notes.trim()) {
+          notesContent.textContent = r.notes;
+          notesSection.style.display = "";
+        } else {
+          notesSection.style.display = "none";
+        }
+
+        // Tasks
+        renderClientTasks(tasks);
+      }
+
+      function renderClientTasks(tasks) {
+        const container = document.getElementById("clientTasksList");
+        const _plannedClr = getComputedStyle(document.documentElement)
+          .getPropertyValue("--planned-kanban")
+          .trim();
+        const statusConfig = {
+          planejado: { icon: "fa-clipboard-list", label: "Planejado", color: _plannedClr },
+          "em-andamento": { icon: "fa-spinner", label: "Em Andamento", color: "#3b82f6" },
+          concluido: { icon: "fa-circle-check", label: "Concluído", color: "#03fa6e" },
+          corrigir: { icon: "fa-triangle-exclamation", label: "Corrigir", color: "#f59e0b" },
+        };
+        const columns = ["planejado", "em-andamento", "concluido", "corrigir"];
+        const sorted = [...tasks].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        container.innerHTML = `<div class="kanban-board">${columns
+          .map((status, ci) => {
+            const cfg = statusConfig[status];
+            const colTasks = sorted.filter((t) => t.status === status);
+            const cardsHTML = colTasks.length
+              ? colTasks
+                  .map(
+                    (task) => `
+                <div class="task-card task-${status}">
+                  <div class="task-body">
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                    ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ""}
+                  </div>
+                  <div class="task-footer">
+                    ${task.updatedAt ? `<span class="task-date"><i class="fa-regular fa-clock"></i> ${formatDate(task.updatedAt)}</span>` : `<span></span>`}
+                  </div>
+                </div>`,
+                  )
+                  .join("")
+              : `<div class="kanban-empty"><i class="fa-solid fa-inbox"></i>Nenhuma</div>`;
+            return `
+            <div class="kanban-column" id="kanban-col-${status}" style="border-top: 3px solid ${cfg.color}">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title" style="color:${cfg.color}">
+                  <span class="kanban-col-dot" style="background:${cfg.color}"></span>
+                  ${cfg.label}
+                </div>
+                <span class="kanban-col-count" style="background:${cfg.color}18; color:${cfg.color}">${colTasks.length}</span>
+              </div>
+              <div class="kanban-col-body">${cardsHTML}</div>
+            </div>`;
+          })
+          .join("")}</div>`;
+      }
+
+      // ========== ADMIN ==========
+      function handleAdminLogin() {
+        const password = document.getElementById("adminPasswordInput").value || "";
+        if (password === ADMIN_PASSWORD) {
+          isAdmin = true;
+          localStorage.setItem("nw_relatorios_admin", "1");
+          showView("adminDashboardView");
+          window.location.hash = "admin";
+          startAdminListener();
+        } else {
+          alert("Senha incorreta.");
+        }
+      }
+
+      function adminLogout() {
+        isAdmin = false;
+        localStorage.removeItem("nw_relatorios_admin");
+        if (unsubscribeReports) {
+          unsubscribeReports();
+          unsubscribeReports = null;
+        }
+        reports = [];
+        currentReportId = null;
+        currentReport = null;
+        window.location.hash = "";
+        showView("clientLoginView");
+      }
+
+      function startAdminListener() {
+        if (unsubscribeReports) return;
+
+        unsubscribeReports = db
+          .collection("relatorios")
+          .orderBy("createdAt", "desc")
+          .onSnapshot(
+            (snapshot) => {
+              // Debounce: Firestore can fire multiple events in quick succession
+              clearTimeout(_snapshotTimer);
+              _snapshotTimer = setTimeout(() => {
+                reports = snapshot.docs.map((doc) => ({
+                  id: doc.id,
+                  ...doc.data(),
+                }));
+
+                updateAdminStats();
+                renderSidebarReports();
+
+                // Only re-render the kanban if the current report's data actually changed
+                if (currentReportId) {
+                  const updated = reports.find((r) => r.id === currentReportId);
+                  if (updated) {
+                    const newTs = updated.updatedAt ? updated.updatedAt.seconds : null;
+                    const changed = newTs !== _lastReportUpdatedAt || _lastReportUpdatedAt === null;
+                    _lastReportUpdatedAt = newTs;
+                    currentReport = updated;
+                    if (changed) renderReportEditor();
+                  }
+                }
+              }, 60);
+            },
+            (err) => {
+              console.error("Erro listener admin:", err);
+            },
+          );
+      }
+
+      function updateAdminStats() {
+        const total = reports.length;
+        const active = reports.filter((r) => r.status === "em-andamento").length;
+        let totalT = 0;
+        let doneT = 0;
+        reports.forEach((r) => {
+          const tasks = r.tasks || [];
+          totalT += tasks.length;
+          doneT += tasks.filter((t) => t.status === "concluido").length;
+        });
+
+        document.getElementById("totalReports").textContent = total;
+        document.getElementById("activeReports").textContent = active;
+        document.getElementById("totalTasks").textContent = totalT;
+        document.getElementById("completedTasks").textContent = doneT;
+        document.getElementById("reportCount").textContent =
+          `${total} relatório${total !== 1 ? "s" : ""}`;
+
+        const trm = document.getElementById("totalReportsMobile");
+        const arm = document.getElementById("activeReportsMobile");
+        if (trm) trm.textContent = total;
+        if (arm) arm.textContent = active;
+
+        // Update Resumo dashboard
+        const pct = totalT > 0 ? Math.round((doneT / totalT) * 100) : 0;
+        const ringFill = document.getElementById("resumoRingFill");
+        const ringPct = document.getElementById("resumoRingPct");
+        const progressHint = document.getElementById("resumoProgressHint");
+        if (ringFill) {
+          const circumference = 2 * Math.PI * 50;
+          ringFill.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+        }
+        if (ringPct) ringPct.textContent = pct + "%";
+        if (progressHint) progressHint.textContent = `${doneT} de ${totalT} tarefas concluídas`;
+
+        // Task status bars
+        const statusBarsEl = document.getElementById("resumoStatusBars");
+        if (statusBarsEl) {
+          let planned = 0,
+            inProgress = 0,
+            toFix = 0;
+          reports.forEach((r) => {
+            (r.tasks || []).forEach((t) => {
+              if (t.status === "planejado") planned++;
+              else if (t.status === "em-andamento") inProgress++;
+              else if (t.status === "corrigir") toFix++;
+            });
+          });
+          const barMax = Math.max(planned, inProgress, doneT, toFix, 1);
+          const bars = [
+            { label: "Planejado", count: planned, color: "var(--planned-kanban)" },
+            { label: "Em Andamento", count: inProgress, color: "#3b82f6" },
+            { label: "Concluído", count: doneT, color: "#03fa6e" },
+            { label: "Corrigir", count: toFix, color: "#f59e0b" },
+          ];
+          statusBarsEl.innerHTML = bars
+            .map(
+              (b) => `
+            <div class="resumo-bar-row">
+              <div class="resumo-bar-label">${b.label}</div>
+              <div class="resumo-bar-track">
+                <div class="resumo-bar-fill" style="width:${Math.round((b.count / barMax) * 100)}%; background:${b.color}"></div>
+              </div>
+              <div class="resumo-bar-count">${b.count}</div>
+            </div>
+          `,
+            )
+            .join("");
+        }
+
+        // Recent projects list
+        const projListEl = document.getElementById("resumoProjectsList");
+        if (projListEl) {
+          const recent = [...reports].slice(0, 6);
+          if (recent.length === 0) {
+            projListEl.innerHTML =
+              '<p style="color:var(--muted);font-size:13px">Nenhum projeto criado ainda.</p>';
+          } else {
+            projListEl.innerHTML = recent
+              .map((r) => {
+                const tasks = r.tasks || [];
+                const done = tasks.filter((t) => t.status === "concluido").length;
+                const pctR = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
+                const statusColor =
+                  r.status === "concluido"
+                    ? "#03fa6e"
+                    : r.status === "em-andamento"
+                      ? "#3b82f6"
+                      : "#f59e0b";
+                const statusLabel =
+                  r.status === "concluido"
+                    ? "Concluído"
+                    : r.status === "em-andamento"
+                      ? "Em Andamento"
+                      : r.status || "—";
+                return `
+                <div class="resumo-project-row">
+                  <div class="resumo-project-info">
+                    <i class="fa-solid ${getProjectIcon(r.projectType)} resumo-project-icon"></i>
+                    <div>
+                      <div class="resumo-project-name">${escapeHtml(r.projectName || "Sem nome")}</div>
+                      <div class="resumo-project-client">${escapeHtml(r.clientName || "Sem cliente")}</div>
+                    </div>
+                  </div>
+                  <div class="resumo-project-right">
+                    <span class="resumo-project-badge" style="color:${statusColor};background:${statusColor}22">${statusLabel}</span>
+                    <div class="resumo-project-prog">
+                      <div class="resumo-project-prog-fill" style="width:${pctR}%"></div>
+                    </div>
+                    <span class="resumo-project-pct">${pctR}%</span>
+                  </div>
+                </div>
+              `;
+              })
+              .join("");
+          }
+        }
+      }
+
+      function renderSidebarReports() {
+        const html = reports
+          .map(
+            (r) => `
+          <div class="sidebar-report-item ${r.id === currentReportId ? "active" : ""}" data-id="${r.id}">
+            <div class="sidebar-report-name">
+              <i class="fa-solid ${getProjectIcon(r.projectType)}"></i>
+              ${escapeHtml(r.projectName || "Sem nome")}
+            </div>
+            <div class="sidebar-report-client">${escapeHtml(r.clientName || "Sem cliente")}</div>
+            <span class="sidebar-report-status badge-${r.status || "em-andamento"}">
+              ${getStatusLabel(r.status)}
+            </span>
+          </div>`,
+          )
+          .join("");
+
+        const emptyHtml = `<div class="sidebar-card empty" style="font-size:12px">Nenhum relatório criado</div>`;
+
+        document.getElementById("sidebarReportsList").innerHTML = reports.length ? html : emptyHtml;
+        const mobileList = document.getElementById("sidebarReportsListMobile");
+        if (mobileList) mobileList.innerHTML = reports.length ? html : emptyHtml;
+
+        // Click listeners
+        document.querySelectorAll(".sidebar-report-item").forEach((item) => {
+          item.addEventListener("click", () => selectReport(item.dataset.id));
+        });
+      }
+
+      function selectReport(id) {
+        currentReportId = id;
+        currentReport = reports.find((r) => r.id === id) || currentReport || null;
+        _lastReportUpdatedAt = null; // force full render on explicit selection
+        editingTaskId = null;
+        currentFilter = "all";
+
+        // Reset filter buttons
+        document
+          .querySelectorAll("#adminTaskFilters .filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        const allBtn = document.querySelector('#adminTaskFilters .filter-btn[data-filter="all"]');
+        if (allBtn) allBtn.classList.add("active");
+
+        if (currentReport) {
+          // Navigate to reports page and show editor
+          navigateAdminPage("reports");
+          // When a specific report is open, no nav button should stay highlighted
+          document
+            .querySelectorAll(".sidebar-nav-item")
+            .forEach((b) => b.classList.remove("active"));
+          document.getElementById("adminEmptyState").classList.add("hidden");
+          document.getElementById("importMdPage").classList.add("hidden");
+          document.getElementById("reportEditor").classList.remove("hidden");
+          renderReportEditor();
+          renderSidebarReports();
+        }
+      }
+
+      function renderReportEditor() {
+        if (!currentReport) return;
+
+        const r = currentReport;
+        const tasks = r.tasks || [];
+
+        document.getElementById("editorProjectName").textContent = r.projectName || "Novo Viso";
+        document.getElementById("editProjectName").value = r.projectName || "";
+        document.getElementById("editProjectType").value = r.projectType || "site";
+        document.getElementById("editClientName").value = r.clientName || "";
+        document.getElementById("editClientEmail").value = r.clientEmail || "";
+        document.getElementById("editClientPhone").value = r.clientPhone || "";
+        document.getElementById("editProjectStatus").value = r.status || "em-andamento";
+        document.getElementById("editDeadline").value = r.deadline || "";
+        document.getElementById("editNotes").value = r.notes || "";
+        document.getElementById("displayAccessCode").textContent = r.accessCode || "------";
+
+        // Admin progress
+        const total = tasks.length;
+        const done = tasks.filter((t) => t.status === "concluido").length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        document.getElementById("adminProgressValue").textContent = `${pct}%`;
+        document.getElementById("adminProgressFill").style.width = `${pct}%`;
+
+        renderAdminTasks();
+      }
+
+      function renderAdminTasks() {
+        if (!currentReport) return;
+
+        const tasks = currentReport.tasks || [];
+        const container = document.getElementById("adminTasksList");
+        const _plannedClr = getComputedStyle(document.documentElement)
+          .getPropertyValue("--planned-kanban")
+          .trim();
+        const statusConfig = {
+          planejado: { icon: "fa-clipboard-list", label: "Planejado", color: _plannedClr },
+          "em-andamento": { icon: "fa-spinner", label: "Em Andamento", color: "#3b82f6" },
+          concluido: { icon: "fa-circle-check", label: "Concluído", color: "#03fa6e" },
+          corrigir: { icon: "fa-triangle-exclamation", label: "Corrigir", color: "#f59e0b" },
+        };
+
+        const columns2 = ["planejado", "em-andamento", "concluido", "corrigir"];
+        const sorted2 = [...tasks].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        container.innerHTML = `<div class="kanban-board">${columns2
+          .map((status, ci) => {
+            const cfg = statusConfig[status];
+            const colTasks = sorted2.filter((t) => t.status === status);
+            const cardsHTML = colTasks.length
+              ? colTasks
+                  .map(
+                    (task) => `
+                <div class="task-card task-${status}" draggable="true" data-task-id="${task.id}">
+                  <div class="task-body">
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                    ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ""}
+                  </div>
+                  <div class="task-footer">
+                    ${task.updatedAt ? `<span class="task-date"><i class="fa-regular fa-clock"></i> ${formatDate(task.updatedAt)}</span>` : `<span></span>`}
+                    <div class="task-actions">
+                      <button class="btn btn-outline btn-small" onclick="openEditTask('${task.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                      <button class="btn btn-outline btn-small" onclick="cycleTaskStatus('${task.id}')" title="Mover status"><i class="fa-solid fa-arrows-rotate"></i></button>
+                      <button class="btn btn-outline btn-small btn-danger" onclick="deleteTask('${task.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                  </div>
+                </div>`,
+                  )
+                  .join("")
+              : `<div class="kanban-empty" data-empty="true"><i class="fa-solid fa-inbox"></i>Nenhuma</div>`;
+            return `
+            <div class="kanban-column" style="border-top: 3px solid ${cfg.color}">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title" style="color:${cfg.color}">
+                  <span class="kanban-col-dot" style="background:${cfg.color}"></span>
+                  ${cfg.label}
+                </div>
+                <span class="kanban-col-count" style="background:${cfg.color}18; color:${cfg.color}">${colTasks.length}</span>
+              </div>
+              <div class="kanban-col-body" data-status="${status}">${cardsHTML}</div>
+            </div>`;
+          })
+          .join("")}</div>`;
+        initKanbanDrag();
+      }
+
+      // ========== KANBAN DRAG & DROP ==========
+      function moveTaskToColumn(taskId, newStatus) {
+        if (!currentReportId || !currentReport) return;
+        const currentTask = (currentReport.tasks || []).find((t) => t.id === taskId);
+        if (!currentTask || currentTask.status === newStatus) return;
+        let tasks = (currentReport.tasks || []).map((t) =>
+          t.id === taskId ? { ...t, status: newStatus, updatedAt: new Date().toISOString() } : t,
+        );
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .update({
+            tasks,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          })
+          .then(() => showToast("Tarefa movida!"))
+          .catch((err) => console.error("Erro:", err));
+      }
+
+      function initKanbanDrag() {
+        const board = document.querySelector("#adminTasksList .kanban-board");
+        if (!board) return;
+        let draggedId = null;
+
+        board.querySelectorAll(".task-card[draggable='true']").forEach((card) => {
+          card.addEventListener("dragstart", (e) => {
+            draggedId = card.dataset.taskId;
+            setTimeout(() => card.classList.add("dragging"), 0);
+            e.dataTransfer.effectAllowed = "move";
+          });
+          card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            board
+              .querySelectorAll(".kanban-column")
+              .forEach((c) => c.classList.remove("drag-over"));
+          });
+        });
+
+        board.querySelectorAll(".kanban-col-body").forEach((col) => {
+          const column = col.closest(".kanban-column");
+          col.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          });
+          col.addEventListener("dragenter", (e) => {
+            e.preventDefault();
+            board
+              .querySelectorAll(".kanban-column")
+              .forEach((c) => c.classList.remove("drag-over"));
+            if (column) column.classList.add("drag-over");
+          });
+          col.addEventListener("dragleave", (e) => {
+            if (column && !column.contains(e.relatedTarget)) column.classList.remove("drag-over");
+          });
+          col.addEventListener("drop", (e) => {
+            e.preventDefault();
+            if (column) column.classList.remove("drag-over");
+            if (draggedId && col.dataset.status) {
+              moveTaskToColumn(draggedId, col.dataset.status);
+              draggedId = null;
+            }
+          });
+        });
+      }
+
+      // ========== REPORT CRUD ==========
+      function createNewReport() {
+        const code = generateAccessCode();
+        const newReport = {
+          projectName: "",
+          projectType: "site",
+          clientName: "",
+          clientEmail: "",
+          clientPhone: "",
+          status: "em-andamento",
+          notes: "",
+          accessCode: code,
+          tasks: [],
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        db.collection("relatorios")
+          .add(newReport)
+          .then((docRef) => {
+            currentReportId = docRef.id;
+            currentReport = { id: docRef.id, ...newReport };
+            showToast("Novo Viso criado!");
+            selectReport(docRef.id);
+          })
+          .catch((err) => {
+            console.error("Erro ao criar relatório:", err);
+            alert("Erro ao criar relatório.");
+          });
+      }
+
+      function saveCurrentReport() {
+        if (!currentReportId) return;
+
+        const data = {
+          projectName: document.getElementById("editProjectName").value.trim(),
+          projectType: document.getElementById("editProjectType").value,
+          clientName: document.getElementById("editClientName").value.trim(),
+          clientEmail: document.getElementById("editClientEmail").value.trim(),
+          clientPhone: document.getElementById("editClientPhone").value.trim(),
+          status: document.getElementById("editProjectStatus").value,
+          deadline: document.getElementById("editDeadline").value,
+          notes: document.getElementById("editNotes").value.trim(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        if (!data.projectName) {
+          alert("Informe o nome do projeto.");
+          return;
+        }
+        if (!data.clientName) {
+          alert("Informe o nome do cliente.");
+          return;
+        }
+
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .update(data)
+          .then(() => showToast("Relatório salvo com sucesso!"))
+          .catch((err) => {
+            console.error("Erro ao salvar:", err);
+            alert("Erro ao salvar relatório.");
+          });
+      }
+
+      function deleteCurrentReport() {
+        if (!currentReportId) return;
+        if (!confirm("Tem certeza que deseja apagar este relatório? Esta ação é irreversível."))
+          return;
+
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .delete()
+          .then(() => {
+            currentReportId = null;
+            currentReport = null;
+            document.getElementById("reportEditor").classList.add("hidden");
+            document.getElementById("adminEmptyState").classList.remove("hidden");
+            showToast("Relatório apagado.");
+          })
+          .catch((err) => {
+            console.error("Erro ao apagar:", err);
+            alert("Erro ao apagar relatório.");
+          });
+      }
+
+      // ========== TASK CRUD ==========
+      function setStatusSelector(value) {
+        const hidden = document.getElementById("taskStatus");
+        if (hidden) hidden.value = value;
+        document.querySelectorAll("#statusSelector .status-opt").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.value === value);
+        });
+      }
+
+      function openTaskModal(editId) {
+        editingTaskId = editId || null;
+        const modal = document.getElementById("taskModalOverlay");
+        const title = document.getElementById("taskModalTitle");
+        const submitBtn = document.getElementById("taskSubmitBtn");
+
+        if (editingTaskId && currentReport) {
+          const task = (currentReport.tasks || []).find((t) => t.id === editingTaskId);
+          if (task) {
+            title.textContent = "Editar Tarefa";
+            submitBtn.textContent = "Salvar Alterações";
+            document.getElementById("taskTitle").value = task.title || "";
+            document.getElementById("taskDescription").value = task.description || "";
+            setStatusSelector(task.status || "planejado");
+          }
+        } else {
+          title.textContent = "Nova Tarefa";
+          submitBtn.textContent = "Adicionar Tarefa";
+          document.getElementById("taskForm").reset();
+          setStatusSelector("planejado");
+        }
+
+        modal.classList.add("active");
+        document.body.style.overflow = "hidden";
+        setTimeout(() => document.getElementById("taskTitle").focus(), 100);
+      }
+
+      function closeTaskModal() {
+        document.getElementById("taskModalOverlay").classList.remove("active");
+        document.body.style.overflow = "";
+        document.getElementById("taskForm").reset();
+        editingTaskId = null;
+      }
+
+      function handleTaskSubmit(e) {
+        e.preventDefault();
+        if (!currentReportId || !currentReport) return;
+
+        const title = document.getElementById("taskTitle").value.trim();
+        const description = document.getElementById("taskDescription").value.trim();
+        const status = document.getElementById("taskStatus").value;
+
+        if (!title) {
+          alert("Informe o título da tarefa.");
+          return;
+        }
+
+        let tasks = [...(currentReport.tasks || [])];
+
+        if (editingTaskId) {
+          tasks = tasks.map((t) =>
+            t.id === editingTaskId
+              ? { ...t, title, description, status, updatedAt: new Date().toISOString() }
+              : t,
+          );
+        } else {
+          const newTask = {
+            id: "task_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+            title,
+            description,
+            status,
+            order: tasks.length,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          tasks.push(newTask);
+        }
+
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .update({
+            tasks,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          })
+          .then(() => {
+            closeTaskModal();
+            showToast(editingTaskId ? "Tarefa atualizada!" : "Tarefa adicionada!");
+          })
+          .catch((err) => {
+            console.error("Erro ao salvar tarefa:", err);
+            alert("Erro ao salvar tarefa.");
+          });
+      }
+
+      function openEditTask(taskId) {
+        openTaskModal(taskId);
+      }
+
+      function cycleTaskStatus(taskId) {
+        if (!currentReportId || !currentReport) return;
+
+        const statusCycle = ["planejado", "em-andamento", "concluido", "corrigir"];
+        let tasks = [...(currentReport.tasks || [])];
+        tasks = tasks.map((t) => {
+          if (t.id === taskId) {
+            const idx = statusCycle.indexOf(t.status);
+            const next = statusCycle[(idx + 1) % statusCycle.length];
+            return { ...t, status: next, updatedAt: new Date().toISOString() };
+          }
+          return t;
+        });
+
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .update({
+            tasks,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          })
+          .then(() => showToast("Status atualizado!"))
+          .catch((err) => console.error("Erro:", err));
+      }
+
+      function deleteTask(taskId) {
+        if (!currentReportId || !currentReport) return;
+        if (!confirm("Apagar esta tarefa?")) return;
+
+        const tasks = (currentReport.tasks || []).filter((t) => t.id !== taskId);
+
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .update({
+            tasks,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          })
+          .then(() => showToast("Tarefa removida."))
+          .catch((err) => console.error("Erro:", err));
+      }
+
+      // ========== ACCESS CODE ==========
+      function regenerateAccessCode() {
+        if (!currentReportId) return;
+        if (!confirm("Gerar novo código? O código anterior deixará de funcionar.")) return;
+        const newCode = generateAccessCode();
+
+        db.collection("relatorios")
+          .doc(currentReportId)
+          .update({
+            accessCode: newCode,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          })
+          .then(() => {
+            document.getElementById("displayAccessCode").textContent = newCode;
+            showToast("Novo código gerado: " + newCode);
+          })
+          .catch((err) => console.error("Erro:", err));
+      }
+
+      function copyAccessCode() {
+        const code = document.getElementById("displayAccessCode").textContent;
+        if (!code || code === "------") return;
+        navigator.clipboard
+          .writeText(code)
+          .then(() => showToast("Código copiado!"))
+          .catch(() => prompt("Copie o código:", code));
+      }
+
+      // URL canônica do sistema (sempre Firebase, independente do domínio atual)
+      function getClientBaseUrl() {
+        return "https://viso-novoweb.web.app";
+      }
+
+      function copyClientLink() {
+        if (!currentReport) return;
+        const code = currentReport.accessCode;
+        if (!code) return;
+        const link = `${getClientBaseUrl()}/#relatorio/${code}`;
+        navigator.clipboard
+          .writeText(link)
+          .then(() => showToast("Link copiado!"))
+          .catch(() => prompt("Copie o link:", link));
+      }
+
+      function sendWhatsAppLink() {
+        if (!currentReport) return;
+        const code = currentReport.accessCode;
+        const link = `${getClientBaseUrl()}/#relatorio/${code}`;
+        const phone = normalizePhone(currentReport.clientPhone || "");
+        const name = currentReport.clientName || "Cliente";
+        const project = currentReport.projectName || "seu projeto";
+
+        const message = `Olá ${name}! 👋\n\nSegue o link para acompanhar o andamento do ${project}:\n\n${link}\n\nCódigo de acesso: *${code}*\n\nQualquer dúvida, estamos à disposição!\n— Equipe NovoWeb`;
+        const encoded = encodeURIComponent(message);
+        const url = phone
+          ? `https://wa.me/${phone}?text=${encoded}`
+          : `https://wa.me/?text=${encoded}`;
+
+        window.open(url, "_blank");
+      }
+
+      // ========== HELPERS ==========
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function scrollToKanbanCol(status) {
+        const col = document.getElementById("kanban-col-" + status);
+        if (col) {
+          col.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
+      function normalizePhone(phone) {
+        if (!phone) return "";
+        const clean = ("" + phone).replace(/\D/g, "");
+        return clean.startsWith("55") ? clean : "55" + clean;
+      }
+
+      function formatDate(dateStr) {
+        try {
+          const d = new Date(dateStr);
+          return d.toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } catch {
+          return dateStr;
+        }
+      }
+
+      function getProjectIcon(type) {
+        const icons = {
+          site: "fa-globe",
+          sistema: "fa-desktop",
+          app: "fa-mobile-screen-button",
+          outro: "fa-folder",
+        };
+        return icons[type] || "fa-folder";
+      }
+
+      function getStatusLabel(status) {
+        const labels = {
+          "em-andamento": "Em Andamento",
+          concluido: "Concluído",
+          pausado: "Pausado",
+        };
+        return labels[status] || "Em Andamento";
+      }
+
+      function showToast(msg) {
+        const el = document.getElementById("successMessage");
+        const textEl = document.getElementById("successText");
+        if (textEl) textEl.textContent = msg;
+        el.classList.add("active");
+        setTimeout(() => el.classList.remove("active"), 3500);
+      }
+
+      // ========== EVENT LISTENERS ==========
+      function setupEventListeners() {
+        // Theme toggles
+        const ttClient = document.getElementById("themeToggleClient");
+        const ttAdmin = document.getElementById("themeToggleAdmin");
+        if (ttClient) ttClient.addEventListener("click", toggleTheme);
+        if (ttAdmin) ttAdmin.addEventListener("click", toggleTheme);
+
+        // Client Login
+        document.getElementById("accessBtn").addEventListener("click", () => {
+          const code = document.getElementById("accessCodeInput").value.trim().toUpperCase();
+          if (!code) {
+            alert("Informe o código de acesso.");
+            return;
+          }
+          loadClientReport(code);
+        });
+
+        document.getElementById("accessCodeInput").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") document.getElementById("accessBtn").click();
+        });
+
+        document.getElementById("clientLogoutBtn").addEventListener("click", () => {
+          if (unsubscribeClientReport) {
+            unsubscribeClientReport();
+            unsubscribeClientReport = null;
+          }
+          clientReport = null;
+          currentFilter = "all";
+          window.location.hash = "";
+          showView("clientLoginView");
+          document.getElementById("accessCodeInput").value = "";
+        });
+
+        // Navigation between client/admin login
+        document.getElementById("goToAdminBtn").addEventListener("click", () => {
+          showView("adminLoginView");
+        });
+
+        document.getElementById("backToClientBtn").addEventListener("click", () => {
+          showView("clientLoginView");
+        });
+
+        // Admin login
+        document.getElementById("adminLoginBtn").addEventListener("click", handleAdminLogin);
+        document.getElementById("adminPasswordInput").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") handleAdminLogin();
+        });
+
+        // Admin logout
+        document.getElementById("adminLogoutBtn").addEventListener("click", adminLogout);
+
+        // New report
+        document.getElementById("newReportBtn").addEventListener("click", () => {
+          navigateAdminPage("reports");
+          createNewReport();
+        });
+        const nrm = document.getElementById("newReportBtnMobile");
+        if (nrm)
+          nrm.addEventListener("click", () => {
+            navigateAdminPage("reports");
+            createNewReport();
+          });
+        document.getElementById("emptyNewReportBtn").addEventListener("click", () => {
+          createNewReport();
+        });
+        document.getElementById("emptyImportMdBtn").addEventListener("click", () => {
+          navigateAdminPage("import");
+        });
+
+        // Mobile import
+        const imm = document.getElementById("importMdBtnMobile");
+        if (imm) imm.addEventListener("click", () => navigateAdminPage("import"));
+
+        // Sidebar navigation
+        document.getElementById("navReportsBtn").addEventListener("click", () => goHome());
+        document.getElementById("sidebarLogo").addEventListener("click", () => goHome());
+        document
+          .getElementById("navImportBtn")
+          .addEventListener("click", () => navigateAdminPage("import"));
+        document
+          .getElementById("navResumoBtn")
+          .addEventListener("click", () => navigateAdminPage("resumo"));
+
+        // Save report
+        document.getElementById("saveReportBtn").addEventListener("click", saveCurrentReport);
+
+        // Preview report
+        document.getElementById("previewReportBtn").addEventListener("click", openPreviewModal);
+        document.getElementById("closePreviewBtn").addEventListener("click", closePreviewModal);
+        document.getElementById("previewModalOverlay").addEventListener("click", (e) => {
+          if (e.target.id === "previewModalOverlay") closePreviewModal();
+        });
+
+        // Delete report
+        document.getElementById("deleteReportBtn").addEventListener("click", deleteCurrentReport);
+
+        // Access code actions
+        document
+          .getElementById("regenerateCodeBtn")
+          .addEventListener("click", regenerateAccessCode);
+        document.getElementById("copyCodeBtn").addEventListener("click", copyAccessCode);
+        document.getElementById("copyLinkBtn").addEventListener("click", copyClientLink);
+        document.getElementById("sendWhatsAppBtn").addEventListener("click", sendWhatsAppLink);
+
+        // Task modal
+        document.getElementById("addTaskBtn").addEventListener("click", () => openTaskModal(null));
+        document.getElementById("taskModalClose").addEventListener("click", closeTaskModal);
+        document.getElementById("taskCancelBtn").addEventListener("click", closeTaskModal);
+        document.getElementById("taskForm").addEventListener("submit", handleTaskSubmit);
+        document.getElementById("taskModalOverlay").addEventListener("click", (e) => {
+          if (e.target.id === "taskModalOverlay") closeTaskModal();
+        });
+
+        // Status selector buttons
+        document.querySelectorAll("#statusSelector .status-opt").forEach((btn) => {
+          btn.addEventListener("click", () => setStatusSelector(btn.dataset.value));
+        });
+
+        // Status filters (admin)
+        document.querySelectorAll("#adminTaskFilters .filter-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document
+              .querySelectorAll("#adminTaskFilters .filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentFilter = btn.dataset.filter;
+            renderAdminTasks();
+          });
+        });
+
+        // Status filters (client)
+        document.querySelectorAll("#clientStatusFilters .filter-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document
+              .querySelectorAll("#clientStatusFilters .filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentFilter = btn.dataset.filter;
+            if (clientReport) renderClientTasks(clientReport.tasks || []);
+          });
+        });
+
+        // Keyboard shortcut: Escape to close modals
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            closeTaskModal();
+            closeAiModal();
+          }
+        });
+
+        // ========== DRAG & DROP ==========
+        setupDropZone();
+
+        // ========== AI / MD IMPORT PAGE ==========
+        document.getElementById("clearPasteBtn").addEventListener("click", () => {
+          document.getElementById("pasteMdTextarea").value = "";
+          updateCharCount();
+        });
+
+        document.getElementById("loadExampleBtn").addEventListener("click", loadMdExample);
+
+        document.getElementById("pasteMdTextarea").addEventListener("input", () => {
+          updateCharCount();
+          const content = document.getElementById("pasteMdTextarea").value.trim();
+          const dot = document.querySelector("#aiStatusIndicator .ai-status-dot");
+          const label = document.getElementById("aiStatusLabel");
+          if (!content) {
+            dot.style.background = "#03fa6e";
+            label.textContent = "Parser pronto";
+          } else {
+            dot.style.background = "#03fa6e";
+            label.textContent = "Pronto para processar";
+          }
+        });
+
+        document.getElementById("processPastedMdBtn").addEventListener("click", () => {
+          const content = document.getElementById("pasteMdTextarea").value.trim();
+          if (!content) {
+            showToast("Cole o conteúdo Markdown primeiro.");
+            return;
+          }
+          processMarkdownWithAI(content);
+        });
+
+        document.getElementById("mdFileInput").addEventListener("change", handleFileSelect);
+
+        // ========== CONVERTER TOGGLE ==========
+        document
+          .getElementById("toggleConverterBtn")
+          .addEventListener("click", () => toggleConverter());
+
+        // ========== CONVERTER LISTENERS ==========
+        document.getElementById("converterRunBtn").addEventListener("click", runConverter);
+
+        document.getElementById("converterInput").addEventListener("input", () => {
+          const len = document.getElementById("converterInput").value.length;
+          const span = document.getElementById("converterInputCount");
+          span.textContent = len.toLocaleString("pt-BR");
+        });
+
+        document.getElementById("converterUseBtn").addEventListener("click", () => {
+          // Converte primeiro se a saída estiver vazia
+          let out = document.getElementById("converterOutput").value.trim();
+          if (!out) {
+            const input = document.getElementById("converterInput").value.trim();
+            if (!input) {
+              showToast("Cole um texto primeiro.");
+              return;
+            }
+            runConverter();
+            out = document.getElementById("converterOutput").value.trim();
+          }
+          if (!out) {
+            showToast("Nenhuma tarefa encontrada no texto.");
+            return;
+          }
+          document.getElementById("pasteMdTextarea").value = out;
+          updateCharCount();
+          toggleConverter(false);
+          showToast("✅ Texto enviado para o campo abaixo!");
+        });
+
+        // AI Modal
+        document.getElementById("aiModalClose").addEventListener("click", closeAiModal);
+        document.getElementById("aiCancelBtn").addEventListener("click", closeAiModal);
+        document.getElementById("aiErrorCloseBtn").addEventListener("click", closeAiModal);
+        document.getElementById("aiRetryBtn").addEventListener("click", () => {
+          if (lastMdContent) processMarkdownWithAI(lastMdContent);
+        });
+        document.getElementById("aiConfirmBtn").addEventListener("click", createReportFromAI);
+        document.getElementById("aiModalOverlay").addEventListener("click", (e) => {
+          if (e.target.id === "aiModalOverlay") closeAiModal();
+        });
+
+        // AI Destination toggle (new vs existing report)
+        document
+          .getElementById("aiDestNewBtn")
+          .addEventListener("click", () => setAiDestination("new"));
+        document
+          .getElementById("aiDestExistingBtn")
+          .addEventListener("click", () => setAiDestination("existing"));
+      }
+
+      // ========== DRAG & DROP SYSTEM ==========
+      let lastMdContent = null;
+
+      function setupDropZone() {
+        const dropZone = document.getElementById("dropZoneMain");
+        if (!dropZone) return;
+
+        // Prevent default drag behaviors on the whole page (but do NOT stopPropagation)
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((event) => {
+          document.body.addEventListener(event, (e) => {
+            e.preventDefault();
+          });
+        });
+
+        // Highlight on drag
+        ["dragenter", "dragover"].forEach((event) => {
+          dropZone.addEventListener(event, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add("dragover");
+          });
+        });
+
+        ["dragleave", "drop"].forEach((event) => {
+          dropZone.addEventListener(event, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove("dragover");
+          });
+        });
+
+        // Handle drop
+        dropZone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove("dragover");
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            handleMdFile(files[0]);
+          }
+        });
+
+        // Click to select
+        dropZone.addEventListener("click", (e) => {
+          // Don't trigger when clicking the file input itself
+          if (e.target.id === "mdFileInput") return;
+          document.getElementById("mdFileInput").click();
+        });
+
+        // Also support dragging file onto the WHOLE import page
+        const importPage = document.getElementById("importMdPage");
+        if (importPage) {
+          ["dragenter", "dragover"].forEach((event) => {
+            importPage.addEventListener(event, (e) => {
+              e.preventDefault();
+              dropZone.classList.add("dragover");
+            });
+          });
+          importPage.addEventListener("dragleave", (e) => {
+            // Only remove if leaving the import page entirely
+            if (!importPage.contains(e.relatedTarget)) {
+              dropZone.classList.remove("dragover");
+            }
+          });
+          importPage.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+              handleMdFile(files[0]);
+            }
+          });
+        }
+      }
+
+      function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) handleMdFile(file);
+        e.target.value = ""; // Reset
+      }
+
+      function handleMdFile(file) {
+        const validExts = [".md", ".txt", ".markdown"];
+        const ext = "." + file.name.split(".").pop().toLowerCase();
+
+        if (!validExts.includes(ext)) {
+          showToast("Apenas arquivos .md, .txt ou .markdown são aceitos.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target.result;
+          processMarkdownWithAI(content);
+        };
+        reader.onerror = () => {
+          showToast("Erro ao ler o arquivo.");
+        };
+        reader.readAsText(file);
+      }
+
+      // ========== STRUCTURED PARSER (sem IA) ==========
+
+      /**
+       * Detecta se o texto segue o padrão estruturado de 3 linhas:
+       *   Título da Tarefa
+       *   Status: Concluído | Em andamento | Planejando | Corrigir
+       *   Descrição opcional
+       * Retorna true se encontrar pelo menos 2 blocos válidos.
+       */
+      function detectStructuredPattern(text) {
+        const statusRe = /^Status:\s*(Conclu[íi]do|Em andamento|Planejando|Corrigir)/im;
+        const blocks = text.split(/\n{2,}/);
+        let found = 0;
+        for (const block of blocks) {
+          const lines = block.trim().split("\n").filter(Boolean);
+          if (lines.length >= 2 && statusRe.test(lines[1])) found++;
+          if (found >= 2) return true;
+        }
+        return false;
+      }
+
+      /**
+       * Mapeia os valores de status do formato estruturado para os valores internos.
+       */
+      function mapStructuredStatus(raw) {
+        const val = raw.trim().toLowerCase();
+        if (val.includes("conclu")) return "concluido";
+        if (val.includes("andamento")) return "em-andamento";
+        if (val.includes("corrigir")) return "corrigir";
+        return "planejado"; // "planejando" e qualquer outro
+      }
+
+      /**
+       * Extrai metadados do cabeçalho do markdown (Projeto, Cliente, Status Geral).
+       */
+      function extractMdMeta(text) {
+        const meta = { projectName: "", clientName: "", status: "em-andamento" };
+
+        // # Título principal como nome do projeto
+        const h1 = text.match(/^#\s+(.+)/m);
+        if (h1) meta.projectName = h1[1].replace(/^(Relatório.*?—\s*)/i, "").trim();
+
+        // **Projeto:** ou Projeto: valor
+        const projMatch = text.match(/\*{0,2}Projeto:\*{0,2}\s*(.+)/i);
+        if (projMatch) meta.projectName = projMatch[1].trim();
+
+        // **Cliente:** ou Cliente: valor
+        const clientMatch = text.match(/\*{0,2}Cliente:\*{0,2}\s*(.+)/i);
+        if (clientMatch) meta.clientName = clientMatch[1].trim();
+
+        // **Status Geral:**
+        const statusMatch = text.match(/\*{0,2}Status\s*Geral:\*{0,2}\s*(.+)/i);
+        if (statusMatch) {
+          const s = statusMatch[1].toLowerCase();
+          if (s.includes("conclu")) meta.status = "concluido";
+          else if (s.includes("pausado")) meta.status = "pausado";
+          else meta.status = "em-andamento";
+        }
+
+        return meta;
+      }
+
+      /**
+       * Parser principal: converte texto estruturado em objeto de relatório
+       * sem chamar nenhuma API externa.
+       */
+      function parseStructuredText(text) {
+        const meta = extractMdMeta(text);
+        const statusRe = /^Status:\s*(.+)/i;
+        const tasks = [];
+
+        // Divide em blocos separados por linha(s) em branco
+        const blocks = text.split(/\n{2,}/);
+
+        for (const block of blocks) {
+          const lines = block.trim().split("\n").filter(Boolean);
+          if (lines.length < 2) continue;
+
+          // Linha 2 deve ser "Status: ..."
+          const statusLine = lines[1].trim();
+          const statusMatch = statusLine.match(statusRe);
+          if (!statusMatch) continue;
+
+          const title = lines[0].trim();
+          // Ignora linhas que claramente são metadados do documento
+          if (/^(#|Projeto:|Cliente:|Data:|Status Geral:|\*{2})/i.test(title)) continue;
+
+          const status = mapStructuredStatus(statusMatch[1]);
+          // Linha 3+ é a descrição
+          const description = lines.slice(2).join(" ").trim();
+
+          tasks.push({ title, description, status });
+        }
+
+        return {
+          projectName: meta.projectName || "Novo Projeto",
+          projectType: "sistema",
+          clientName: meta.clientName || "",
+          clientEmail: "",
+          clientPhone: "",
+          status: meta.status,
+          notes: "",
+          tasks,
+          _parsedLocally: true,
+        };
+      }
+
+      // ========== PROCESSING (PARSER LOCAL) ==========
+      function processMarkdownWithAI(mdContent) {
+        lastMdContent = mdContent;
+        const parsed = parseStructuredText(mdContent);
+        if (parsed.tasks.length === 0) {
+          showToast("Nenhuma tarefa encontrada. Use o formato: Nome da Tarefa / Status: Concluído");
+          return;
+        }
+        showAiPreview(parsed);
+        showToast(`✅ ${parsed.tasks.length} tarefas extraídas!`);
+      }
+
+      function showAiPreview(data) {
+        // Reset destination to "new" by default
+        setAiDestination("new");
+        populateExistingReportsList();
+
+        document.getElementById("aiProjectName").value = data.projectName || "";
+        document.getElementById("aiProjectType").value = data.projectType || "sistema";
+        document.getElementById("aiClientName").value = data.clientName || "";
+        document.getElementById("aiProjectStatus").value = data.status || "em-andamento";
+        document.getElementById("aiNotes").value = data.notes || "";
+
+        // Badge indicando origem do parse
+        const modalTitle = document.querySelector("#aiStep2 .modal-title");
+        if (modalTitle) {
+          const existingBadge = modalTitle.querySelector(".parser-badge");
+          if (existingBadge) existingBadge.remove();
+          const badge = document.createElement("span");
+          badge.className = "parser-badge nav-badge";
+          badge.style.cssText = "margin-left:8px; font-size:11px; vertical-align:middle;";
+          badge.style.background = "#03fa6e";
+          badge.style.color = "#000";
+          badge.textContent = "Parser Direto";
+          modalTitle.appendChild(badge);
+        }
+
+        const tasks = data.tasks || [];
+        document.getElementById("aiTaskCount").textContent = tasks.length;
+
+        const _plannedClr = getComputedStyle(document.documentElement)
+          .getPropertyValue("--planned-kanban")
+          .trim();
+        const statusConfig = {
+          planejado: { icon: "fa-clipboard-list", label: "Planejado", color: _plannedClr },
+          "em-andamento": { icon: "fa-spinner", label: "Em Andamento", color: "#3b82f6" },
+          concluido: { icon: "fa-circle-check", label: "Concluído", color: "#03fa6e" },
+          corrigir: { icon: "fa-triangle-exclamation", label: "Corrigir", color: "#f59e0b" },
+        };
+
+        const container = document.getElementById("aiTasksPreviewList");
+        if (tasks.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state"><div class="empty-state-text">Nenhuma tarefa extraída</div></div>';
+        } else {
+          container.innerHTML = tasks
+            .map((task, i) => {
+              const cfg = statusConfig[task.status] || statusConfig["planejado"];
+              return `
+              <div class="ai-task-preview-item task-${task.status}">
+                <div class="task-header">
+                  <span class="task-status-icon" style="color:${cfg.color}">
+                    <i class="fa-solid ${cfg.icon}"></i>
+                  </span>
+                  <input type="text" class="ai-task-input" value="${escapeHtml(task.title)}" data-index="${i}" data-field="title" />
+                  <select class="ai-task-status-select" data-index="${i}" data-field="status">
+                    <option value="planejado" ${task.status === "planejado" ? "selected" : ""}>📋 Planejado</option>
+                    <option value="em-andamento" ${task.status === "em-andamento" ? "selected" : ""}>🔄 Em Andamento</option>
+                    <option value="concluido" ${task.status === "concluido" ? "selected" : ""}>✅ Concluído</option>
+                    <option value="corrigir" ${task.status === "corrigir" ? "selected" : ""}>⚠️ Corrigir</option>
+                  </select>
+                  <button class="btn btn-outline btn-small btn-danger ai-task-remove" data-index="${i}" title="Remover">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                ${task.description ? `<div class="task-description" style="padding-left:26px; margin-top:4px">${escapeHtml(task.description)}</div>` : ""}
+              </div>`;
+            })
+            .join("");
+
+          // Add remove listeners
+          container.querySelectorAll(".ai-task-remove").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              btn.closest(".ai-task-preview-item").remove();
+              document.getElementById("aiTaskCount").textContent =
+                container.querySelectorAll(".ai-task-preview-item").length;
+            });
+          });
+        }
+
+        // Store parsed data for later
+        window._aiParsedData = data;
+
+        // Auto-match: check if project name matches an existing report
+        autoMatchExistingReport(data.projectName);
+
+        openAiModal("preview");
+      }
+
+      // ========== AI DESTINATION: NEW vs EXISTING ==========
+      let aiDestination = "new"; // "new" or "existing"
+
+      function setAiDestination(dest) {
+        aiDestination = dest;
+        // Toggle active state on buttons
+        document.getElementById("aiDestNewBtn").classList.toggle("active", dest === "new");
+        document
+          .getElementById("aiDestExistingBtn")
+          .classList.toggle("active", dest === "existing");
+        // Toggle sections visibility
+        document.getElementById("aiNewSection").classList.toggle("hidden", dest === "existing");
+        document.getElementById("aiExistingSection").classList.toggle("hidden", dest === "new");
+        // Update confirm button text
+        document.getElementById("aiConfirmBtnText").textContent =
+          dest === "new" ? "Criar Relatório" : "Adicionar Tarefas";
+      }
+
+      function populateExistingReportsList() {
+        const select = document.getElementById("aiExistingReportSelect");
+        select.innerHTML = '<option value="">— Selecione um relatório —</option>';
+        reports.forEach((r) => {
+          const taskCount = (r.tasks || []).length;
+          const opt = document.createElement("option");
+          opt.value = r.id;
+          opt.textContent = `${r.projectName || "Sem nome"} — ${r.clientName || "Sem cliente"} (${taskCount} tarefas)`;
+          select.appendChild(opt);
+        });
+
+        // When user selects a report, show info
+        select.onchange = () => {
+          const info = document.getElementById("aiExistingInfo");
+          const infoText = document.getElementById("aiExistingInfoText");
+          if (select.value) {
+            const r = reports.find((rep) => rep.id === select.value);
+            if (r) {
+              const existingCount = (r.tasks || []).length;
+              const newCount = document.querySelectorAll(
+                "#aiTasksPreviewList .ai-task-preview-item",
+              ).length;
+              infoText.textContent = `"${r.projectName}" já tem ${existingCount} tarefa(s). Serão adicionadas ${newCount} nova(s).`;
+              info.classList.remove("hidden");
+            }
+          } else {
+            info.classList.add("hidden");
+          }
+        };
+      }
+
+      function autoMatchExistingReport(projectName) {
+        if (!projectName || reports.length === 0) return;
+        const nameLower = projectName.toLowerCase().trim();
+        const match = reports.find((r) => (r.projectName || "").toLowerCase().trim() === nameLower);
+        if (match) {
+          // Auto-switch to existing mode with this report pre-selected
+          setAiDestination("existing");
+          document.getElementById("aiExistingReportSelect").value = match.id;
+          document.getElementById("aiExistingReportSelect").dispatchEvent(new Event("change"));
+        }
+      }
+
+      function showAiError(message) {
+        // Use innerHTML to support line breaks in error messages
+        const el = document.getElementById("aiErrorText");
+        el.innerHTML = message.replace(/\n/g, "<br>");
+        openAiModal("error");
+      }
+
+      function updateAiStatus(text, pct) {
+        document.getElementById("aiStatusText").textContent = text;
+        document.getElementById("aiProgressFill").style.width = `${pct}%`;
+      }
+
+      // ========== AI MODAL MANAGEMENT ==========
+      function openAiModal(step) {
+        const overlay = document.getElementById("aiModalOverlay");
+        document.getElementById("aiStep1").classList.add("hidden");
+        document.getElementById("aiStep2").classList.add("hidden");
+        document.getElementById("aiStepError").classList.add("hidden");
+
+        if (step === "processing") {
+          document.getElementById("aiStep1").classList.remove("hidden");
+          updateAiStatus("Analisando conteúdo do Markdown...", 10);
+        } else if (step === "preview") {
+          document.getElementById("aiStep2").classList.remove("hidden");
+        } else if (step === "error") {
+          document.getElementById("aiStepError").classList.remove("hidden");
+        }
+
+        overlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeAiModal() {
+        document.getElementById("aiModalOverlay").classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      // ========== CREATE REPORT FROM AI ==========
+      function createReportFromAI() {
+        // Collect tasks from preview (allowing edits)
+        const taskEls = document.querySelectorAll("#aiTasksPreviewList .ai-task-preview-item");
+        const tasks = [];
+        taskEls.forEach((el, i) => {
+          const titleInput = el.querySelector('.ai-task-input[data-field="title"]');
+          const statusSelect = el.querySelector('.ai-task-status-select[data-field="status"]');
+          const descEl = el.querySelector(".task-description");
+
+          if (titleInput && titleInput.value.trim()) {
+            tasks.push({
+              id: "task_" + Date.now() + "_" + i,
+              title: titleInput.value.trim(),
+              description: descEl ? descEl.textContent.trim() : "",
+              status: statusSelect ? statusSelect.value : "planejado",
+              order: i,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        });
+
+        if (tasks.length === 0) {
+          alert("Nenhuma tarefa para importar.");
+          return;
+        }
+
+        if (aiDestination === "existing") {
+          // ---- ADD TO EXISTING REPORT ----
+          const selectedId = document.getElementById("aiExistingReportSelect").value;
+          if (!selectedId) {
+            alert("Selecione um relatório existente.");
+            return;
+          }
+
+          const existingReport = reports.find((r) => r.id === selectedId);
+          if (!existingReport) {
+            alert("Relatório não encontrado.");
+            return;
+          }
+
+          const existingTasks = existingReport.tasks || [];
+          // Renumber order for new tasks starting after existing ones
+          const maxOrder = existingTasks.reduce((max, t) => Math.max(max, t.order || 0), 0);
+          tasks.forEach((t, i) => {
+            t.order = maxOrder + 1 + i;
+          });
+
+          const mergedTasks = [...existingTasks, ...tasks];
+          const notes = document.getElementById("aiNotes").value.trim();
+          const updateData = {
+            tasks: mergedTasks,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+          // Append notes if any
+          if (notes) {
+            const existingNotes = existingReport.notes || "";
+            updateData.notes = existingNotes
+              ? existingNotes + "\n\n📥 Importado via IA:\n" + notes
+              : notes;
+          }
+
+          db.collection("relatorios")
+            .doc(selectedId)
+            .update(updateData)
+            .then(() => {
+              currentReportId = selectedId;
+              closeAiModal();
+              showToast(`${tasks.length} tarefa(s) adicionadas a "${existingReport.projectName}"!`);
+              document.getElementById("pasteMdTextarea").value = "";
+              updateCharCount();
+              addRecentImport(existingReport.projectName + " (merge)", tasks.length);
+              navigateAdminPage("reports");
+              // Select the report to show it
+              selectReport(selectedId);
+            })
+            .catch((err) => {
+              console.error("Erro ao adicionar tarefas:", err);
+              alert("Erro ao adicionar tarefas ao relatório.");
+            });
+        } else {
+          // ---- CREATE NEW REPORT ----
+          const projectName = document.getElementById("aiProjectName").value.trim();
+          const projectType = document.getElementById("aiProjectType").value;
+          const clientName = document.getElementById("aiClientName").value.trim();
+          const status = document.getElementById("aiProjectStatus").value;
+          const notes = document.getElementById("aiNotes").value.trim();
+
+          if (!projectName) {
+            alert("Informe o nome do projeto.");
+            return;
+          }
+
+          const code = generateAccessCode();
+          const newReport = {
+            projectName,
+            projectType,
+            clientName,
+            clientEmail: window._aiParsedData?.clientEmail || "",
+            clientPhone: window._aiParsedData?.clientPhone || "",
+            status,
+            notes,
+            accessCode: code,
+            tasks,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            importedFromMd: true,
+          };
+
+          db.collection("relatorios")
+            .add(newReport)
+            .then((docRef) => {
+              currentReportId = docRef.id;
+              closeAiModal();
+              showToast(`Relatório "${projectName}" criado com ${tasks.length} tarefas!`);
+              document.getElementById("pasteMdTextarea").value = "";
+              localStorage.removeItem("nw_md_draft");
+              updateCharCount();
+              addRecentImport(projectName, tasks.length);
+              navigateAdminPage("reports");
+              selectReport(docRef.id);
+              setTimeout(() => {
+                showSendToClientPrompt(
+                  docRef.id,
+                  projectName,
+                  code,
+                  newReport.clientPhone,
+                  newReport.clientName,
+                  projectName,
+                );
+              }, 400);
+            })
+            .catch((err) => {
+              console.error("Erro ao criar relatório:", err);
+              alert("Erro ao criar relatório.");
+            });
+        }
+      }
+
+      // ========== API KEY MODAL ==========
+      function openApiKeyModal() {
+        const overlay = document.getElementById("apiKeyModalOverlay");
+        const savedKey = localStorage.getItem("nw_gemini_api_key");
+        if (savedKey) {
+          document.getElementById("geminiApiKeyInput").value = savedKey;
+          document.getElementById("aiKeyStatus").innerHTML =
+            '<div style="color: var(--done); font-size: 12px; margin-top: 8px"><i class="fa-solid fa-circle-check"></i> Chave configurada</div>';
+        } else {
+          document.getElementById("aiKeyStatus").innerHTML = "";
+        }
+        overlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeApiKeyModal() {
+        document.getElementById("apiKeyModalOverlay").classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      function saveApiKey() {
+        const key = document.getElementById("geminiApiKeyInput").value.trim();
+        if (!key) {
+          alert("Informe a chave API.");
+          return;
+        }
+        localStorage.setItem("nw_gemini_api_key", key);
+        closeApiKeyModal();
+        showToast("Chave API salva com sucesso!");
+
+        // Update AI status indicator
+        updateAiIndicator();
+
+        // If there's pending content, process it now
+        if (lastMdContent) {
+          processMarkdownWithAI(lastMdContent);
+        }
+      }
+
+      // ========== ADMIN PAGE NAVIGATION ==========
+      let currentAdminPage = "reports";
+
+      // ========== MODAL ENVIAR AO CLIENTE (pós-import) ==========
+      function showSendToClientPrompt(
+        reportId,
+        reportName,
+        accessCode,
+        clientPhone,
+        clientName,
+        projectName,
+      ) {
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay active";
+        overlay.id = "sendPromptOverlay";
+
+        const reportUrl = `${getClientBaseUrl()}/#relatorio/${accessCode}`;
+        const waUrl = window.generateReportWhatsAppUrl
+          ? window.generateReportWhatsAppUrl(
+              clientPhone,
+              clientName,
+              projectName,
+              accessCode,
+              reportUrl,
+            )
+          : `https://wa.me/?text=${encodeURIComponent(reportUrl)}`;
+
+        overlay.innerHTML = `
+          <div class="modal" style="max-width:440px; text-align:center">
+            <div style="font-size:48px; margin-bottom:12px">🎉</div>
+            <h2 class="modal-title">Relatório criado!</h2>
+            <p style="color:var(--muted);font-size:14px;margin:8px 0 20px">
+              <strong>${escapeHtml(reportName)}</strong> foi criado com sucesso.<br>
+              Deseja enviar o acesso ao cliente agora?
+            </p>
+            <div class="access-code-display" style="justify-content:center;margin-bottom:20px">
+              <span class="access-code-text" style="font-size:22px;letter-spacing:4px">${accessCode}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-full" onclick="document.getElementById('sendPromptOverlay').remove()">
+                <i class="fa-brands fa-whatsapp"></i>
+                Enviar por WhatsApp
+              </a>
+              <button class="btn btn-outline btn-full" id="sendPromptCopyBtn">
+                <i class="fa-solid fa-link"></i>
+                Copiar Link
+              </button>
+              <button class="btn btn-outline btn-full" onclick="document.getElementById('sendPromptOverlay').remove()">
+                Fazer isso depois
+              </button>
+            </div>
+          </div>`;
+
+        overlay.querySelector("#sendPromptCopyBtn").addEventListener("click", () => {
+          navigator.clipboard.writeText(reportUrl).then(() => {
+            showToast("Link copiado!");
+          });
+          overlay.remove();
+        });
+
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) overlay.remove();
+        });
+        document.body.appendChild(overlay);
+      }
+
+      function goHome() {
+        currentReportId = null;
+        currentReport = null;
+        navigateAdminPage("reports");
+      }
+
+      function navigateAdminPage(page) {
+        currentAdminPage = page;
+
+        // Update sidebar nav buttons
+        document.querySelectorAll(".sidebar-nav-item").forEach((b) => b.classList.remove("active"));
+        const activeBtn = document.querySelector(`.sidebar-nav-item[data-page="${page}"]`);
+        if (activeBtn) activeBtn.classList.add("active");
+
+        // Sidebar report items: only show active when on reports page
+        document.querySelectorAll(".sidebar-report-item").forEach((item) => {
+          if (page === "reports") {
+            item.classList.toggle("active", item.dataset.id === currentReportId);
+          } else {
+            item.classList.remove("active");
+          }
+        });
+
+        // Hide all admin pages
+        document.getElementById("adminEmptyState").classList.add("hidden");
+        document.getElementById("reportEditor").classList.add("hidden");
+        document.getElementById("importMdPage").classList.add("hidden");
+        document.getElementById("resumoPage").classList.add("hidden");
+
+        if (page === "reports") {
+          document.getElementById("adminHeaderTitle").textContent = "Painel de Relatórios";
+          if (currentReportId && currentReport) {
+            document.getElementById("reportEditor").classList.remove("hidden");
+          } else {
+            document.getElementById("adminEmptyState").classList.remove("hidden");
+          }
+        } else if (page === "import") {
+          document.getElementById("adminHeaderTitle").textContent = "Importar com IA";
+          document.getElementById("importMdPage").classList.remove("hidden");
+          updateAiIndicator();
+          updateCharCount();
+          loadMdDraft();
+          loadRecentImports();
+        } else if (page === "resumo") {
+          document.getElementById("adminHeaderTitle").textContent = "Resumo Geral";
+          document.getElementById("resumoPage").classList.remove("hidden");
+        }
+      }
+
+      // ========== PARSER STATUS INDICATOR ==========
+      function updateAiIndicator() {
+        const dot = document.querySelector("#aiStatusIndicator .ai-status-dot");
+        const label = document.getElementById("aiStatusLabel");
+        if (dot) dot.style.background = "#03fa6e";
+        if (label) label.textContent = "Parser pronto";
+      }
+
+      // ========== CONVERTER TOGGLE ==========
+      function toggleConverter(forceState) {
+        const converterPanel = document.getElementById("converterPanel");
+        const pasteEditor = document.getElementById("pasteEditorSection");
+        const btn = document.getElementById("toggleConverterBtn");
+        const icon = document.getElementById("pasteSectionIcon");
+        const title = document.getElementById("pasteSectionTitle");
+        const howtoImport = document.getElementById("howtoImport");
+        const howtoConverter = document.getElementById("howtoConverter");
+        const isOpen = !converterPanel.classList.contains("hidden");
+        const shouldOpen = forceState !== undefined ? forceState : !isOpen;
+
+        if (shouldOpen) {
+          converterPanel.classList.remove("hidden");
+          pasteEditor.classList.add("hidden");
+          howtoImport.classList.add("hidden");
+          howtoConverter.classList.remove("hidden");
+          btn.classList.add("active");
+          btn.querySelector("i").className = "fa-solid fa-paste";
+          btn.querySelector("span").textContent = "Colar Markdown";
+          icon.className = "fa-solid fa-arrows-rotate";
+          title.textContent = "Conversor de Texto";
+        } else {
+          converterPanel.classList.add("hidden");
+          pasteEditor.classList.remove("hidden");
+          howtoImport.classList.remove("hidden");
+          howtoConverter.classList.add("hidden");
+          btn.classList.remove("active");
+          btn.querySelector("i").className = "fa-solid fa-arrows-rotate";
+          btn.querySelector("span").textContent = "Converter";
+          icon.className = "fa-solid fa-paste";
+          title.textContent = "Colar Markdown";
+        }
+      }
+
+      // ========== IMPORT TABS (removido — mantido apenas por compat.) ==========
+      function switchImportTab() {}
+
+      // ========== CONVERTER: TEXTO DETALHADO → FORMATO ESTRUTURADO ==========
+      function runConverter() {
+        const input = document.getElementById("converterInput").value.trim();
+        if (!input) {
+          showToast("Cole um texto primeiro.");
+          return;
+        }
+
+        // Spin the button icon
+        const btn = document.getElementById("converterRunBtn");
+        btn.classList.add("converting");
+        setTimeout(() => btn.classList.remove("converting"), 520);
+
+        const result = convertDetailedToStructured(input);
+        document.getElementById("converterOutput").value = result;
+
+        // Conta quantas tarefas foram geradas
+        const taskCount = (result.match(/^Status:/gm) || []).length;
+        if (taskCount > 0) {
+          showToast(
+            `✅ ${taskCount} tarefa${taskCount !== 1 ? "s" : ""} convertida${taskCount !== 1 ? "s" : ""}!`,
+          );
+        } else {
+          showToast("Nenhuma tarefa encontrada. Verifique o formato do texto.");
+        }
+      }
+
+      /**
+       * Converte qualquer markdown detalhado (com headers ##/###, ✅, ⚠️,
+       * listas de "próximos passos", etc.) para o formato estruturado:
+       *
+       *   Nome da Tarefa
+       *   Status: Concluído
+       *   Descrição curta opcional
+       */
+      function convertDetailedToStructured(text) {
+        const lines = text.split("\n");
+        const tasks = [];
+        let sectionStatus = "planejado"; // status herdado do H2 atual
+        let currentTask = null; // tarefa sendo acumulada de um H3
+
+        const STATUS_MAP = {
+          concluido: "Concluído",
+          "em-andamento": "Em andamento",
+          planejado: "Planejando",
+          corrigir: "Corrigir",
+        };
+
+        function inferSectionStatus(title) {
+          const t = title.toLowerCase();
+          if (/pronto|funcionando|novidade|adicionado|conclu|feito|entregue|finalizado/.test(t))
+            return "concluido";
+          if (/andamento|progresso|fazendo|corrigindo|desenvolvimento/.test(t))
+            return "em-andamento";
+          if (/próximos|planejado|planejando|futuro|pendente|backlog/.test(t)) return "planejado";
+          if (/corre[cç]|bug|fix|erro|problema/.test(t)) return "corrigir";
+          return null;
+        }
+
+        function saveCurrentTask() {
+          if (currentTask && currentTask.title) {
+            tasks.push({ ...currentTask });
+            currentTask = null;
+          }
+        }
+
+        function stripMd(str) {
+          return str
+            .replace(/\*{1,2}/g, "")
+            .replace(/_{1,2}/g, "")
+            .replace(/`/g, "")
+            .replace(/^[-*+]\s+/, "")
+            .replace(/\[.\]\s*/, "")
+            .trim();
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+          const raw = lines[i];
+          const line = raw.trim();
+
+          if (!line) continue;
+
+          // Pula separadores e tabelas
+          if (/^(-{3,}|={3,}|\|)/.test(line)) continue;
+
+          // Pula metadados comuns
+          if (/^\*{0,2}(Data|Projeto|Próxima atualização|Status Geral):/.test(line)) continue;
+
+          // H1 → nome do projeto (ignora, não vira tarefa)
+          if (/^#\s/.test(line)) continue;
+
+          // H2 → define seção/status herdado
+          if (/^##\s/.test(line) && !/^###/.test(line)) {
+            saveCurrentTask();
+            const title = line
+              .replace(/^##\s+/, "")
+              .replace(/\*{1,2}/g, "")
+              .trim();
+            const inferred = inferSectionStatus(title);
+            if (inferred) sectionStatus = inferred;
+            continue;
+          }
+
+          // H3 → vira uma tarefa
+          if (/^###\s/.test(line)) {
+            saveCurrentTask();
+            const title = line
+              .replace(/^###\s+/, "")
+              .replace(/\*{1,2}/g, "")
+              .trim();
+            currentTask = { title, status: sectionStatus, desc: "" };
+            continue;
+          }
+
+          // Bullet ✅ → concluído (standalone) OU descrição de H3 ativo
+          const doneMatch = line.match(/^[-*+]?\s*✅\s+(.+)/);
+          if (doneMatch) {
+            const bulletText = stripMd(doneMatch[1])
+              .replace(/\*{1,2}([^*]+)\*{1,2}.*/g, "$1")
+              .trim();
+            // Se há um H3 ativo, acumula como descrição (não cria tarefa nova)
+            if (currentTask) {
+              if (!currentTask.desc) currentTask.desc = bulletText;
+              continue;
+            }
+            // Standalone ✅ → nova tarefa concluída
+            saveCurrentTask();
+            if (bulletText.length < 80) {
+              tasks.push({ title: bulletText, status: "concluido", desc: "" });
+            }
+            continue;
+          }
+
+          // Bullet ⚠️ → em-andamento
+          const warnMatch = line.match(/^[-*+]?\s*⚠️\s+(.+)/);
+          if (warnMatch) {
+            saveCurrentTask();
+            const title = stripMd(warnMatch[1]);
+            tasks.push({ title, status: "em-andamento", desc: "" });
+            continue;
+          }
+
+          // Bullet simples sob H3 ativo → primeira linha vira descrição curta
+          if (currentTask) {
+            const bulletMatch = line.match(/^[-*+]\s+(.+)/);
+            if (bulletMatch && !currentTask.desc) {
+              currentTask.desc = stripMd(bulletMatch[1]).replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1");
+            }
+            continue;
+          }
+
+          // Bullet simples em seção "planejado" sem H3 ativo → vira tarefa
+          if (sectionStatus === "planejado") {
+            const bulletMatch = line.match(/^[-*+]\s+(.+)/);
+            if (bulletMatch) {
+              const title = stripMd(bulletMatch[1]);
+              if (title.length > 3 && title.length < 100) {
+                tasks.push({ title, status: "planejado", desc: "" });
+              }
+            }
+          }
+        }
+
+        saveCurrentTask();
+
+        // Remove duplicatas (mesmo título)
+        const seen = new Set();
+        const unique = tasks.filter((t) => {
+          const key = t.title.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        // Gera o texto estruturado
+        return unique
+          .map((t) => {
+            const lines = [t.title, `Status: ${STATUS_MAP[t.status] || "Planejando"}`];
+            if (t.desc) lines.push(t.desc);
+            return lines.join("\n");
+          })
+          .join("\n\n");
+      }
+
+      // ========== CHAR COUNT + DRAFT SAVE ==========
+      function updateCharCount() {
+        const textarea = document.getElementById("pasteMdTextarea");
+        const count = document.getElementById("charCount");
+        if (textarea && count) {
+          count.textContent = textarea.value.length;
+          // Salva rascunho no localStorage automaticamente
+          if (textarea.value.trim()) {
+            localStorage.setItem("nw_md_draft", textarea.value);
+          } else {
+            localStorage.removeItem("nw_md_draft");
+          }
+        }
+      }
+
+      function loadMdDraft() {
+        const draft = localStorage.getItem("nw_md_draft");
+        const textarea = document.getElementById("pasteMdTextarea");
+        if (draft && textarea) {
+          textarea.value = draft;
+          updateCharCount();
+          // Atualiza indicador de status
+          const dot = document.querySelector("#aiStatusIndicator .ai-status-dot");
+          const label = document.getElementById("aiStatusLabel");
+          if (dot && label) {
+            dot.style.background = "#03fa6e";
+            label.textContent = "Rascunho restaurado — pronto";
+          }
+        }
+      }
+
+      // ========== LOAD EXAMPLE ==========
+      // Contadores para rotação dos exemplos
+      let _exampleIndexPaste = 0;
+      let _exampleIndexConverter = 0;
+
+      const _examplesPaste = [
+        // 1 — ERP PetShop
+        `# Projeto ERP PetShop
+## Cliente: Carlos Mendes
+
+Login e Segurança
+Status: Concluído
+Sistema com autenticação segura e persistência de sessão.
+
+Cadastro de Clientes
+Status: Concluído
+Cadastro completo com validações obrigatórias e máscaras.
+
+Cadastro de Produtos
+Status: Concluído
+Controle de estoque, preços e categorias.
+
+Vendas e PDV
+Status: Em andamento
+Ajustes finais no fluxo de comissão automática.
+
+Gráficos de Comissão
+Status: Em andamento
+Implementação de visualização de dados no dashboard.
+
+Relatórios Avançados
+Status: Planejando
+Relatórios detalhados por período e desempenho.
+
+Exportação Excel e PDF
+Status: Planejando
+Geração de arquivos para análise externa.`,
+
+        // 2 — Site Institucional
+        `# Site Institucional
+## Cliente: Studio Arquitetura Viva
+
+Design e Identidade Visual
+Status: Concluído
+Paleta de cores, tipografia e componentes aprovados pelo cliente.
+
+Página Inicial
+Status: Concluído
+Hero, serviços e depoimentos finalizados e responsivos.
+
+Página de Portfólio
+Status: Concluído
+Galeria com filtros por categoria e lightbox funcional.
+
+Formulário de Contato
+Status: Em andamento
+Integração com e-mail e validação de campos em revisão.
+
+Blog e Artigos
+Status: Em andamento
+CMS configurado, aguardando conteúdo do cliente.
+
+SEO e Performance
+Status: Planejando
+Otimização de imagens, meta tags e Core Web Vitals.
+
+Publicação e Domínio
+Status: Planejando
+Configuração de hospedagem e certificado SSL.`,
+
+        // 3 — App Mobile
+        `# Aplicativo Mobile
+## Cliente: Clínica Bem Estar
+
+Autenticação
+Status: Concluído
+Login via e-mail e Google OAuth implementados.
+
+Tela de Agendamento
+Status: Concluído
+Calendário interativo com seleção de horários disponíveis.
+
+Perfil do Paciente
+Status: Concluído
+Histórico de consultas e edição de dados pessoais.
+
+Notificações Push
+Status: Em andamento
+Lembretes de consulta configurados, testes em andamento.
+
+Integração com Prontuário
+Status: Em andamento
+Sincronização com sistema interno da clínica.
+
+Chat com Recepção
+Status: Planejando
+Módulo de mensagens em tempo real via WebSocket.
+
+Publicação nas Lojas
+Status: Planejando
+Build para iOS e Android, revisão e submissão.`,
+
+        // 4 — E-commerce
+        `# Loja Virtual
+## Cliente: Empório Natural Foods
+
+Catálogo de Produtos
+Status: Concluído
+Listagem com filtros, busca e paginação implementados.
+
+Carrinho e Checkout
+Status: Concluído
+Fluxo completo com cálculo de frete e cupons.
+
+Integração de Pagamento
+Status: Concluído
+Gateway de pagamento com Pix, boleto e cartão.
+
+Área do Cliente
+Status: Em andamento
+Dashboard com pedidos, endereços e favoritos.
+
+Painel Administrativo
+Status: Em andamento
+Gestão de estoque, pedidos e relatórios de venda.
+
+Programa de Fidelidade
+Status: Planejando
+Sistema de pontos e recompensas para clientes recorrentes.
+
+App Mobile
+Status: Planejando
+Versão mobile nativa para iOS e Android.`,
+
+        // 5 — Sistema Escolar
+        `# Sistema de Gestão Escolar
+## Cliente: Colégio São Lucas
+
+Cadastro de Alunos e Turmas
+Status: Concluído
+Matrícula, dados escolares e organização por turno.
+
+Lançamento de Notas
+Status: Concluído
+Interface para professores com cálculo automático de média.
+
+Frequência e Chamada
+Status: Concluído
+Registro digital de presença por aula.
+
+Portal dos Pais
+Status: Em andamento
+Acesso a notas, frequência e comunicados em tempo real.
+
+Geração de Boletins
+Status: Em andamento
+PDF automático com layout personalizado do colégio.
+
+Comunicados e Agenda
+Status: Planejando
+Módulo de avisos e calendário de eventos escolares.
+
+App Mobile
+Status: Planejando
+Aplicativo para pais acompanharem o desempenho dos filhos.`,
+      ];
+
+      const _examplesConverter = [
+        // 1 — ERP PetShop
+        `## ✅ Concluído
+
+### Login e Segurança
+✅ Sistema com autenticação segura e persistência de sessão implementada.
+
+### Cadastro de Clientes
+✅ Cadastro completo com validações obrigatórias e máscaras de campo.
+
+### Cadastro de Produtos
+✅ Controle de estoque, preços e categorias funcionando.
+
+## ⚠️ Em andamento
+
+### Vendas e PDV
+⚠️ Ajustes finais no fluxo de comissão automática entre vendedores.
+
+### Gráficos de Comissão
+⚠️ Implementação de visualização de dados no dashboard principal.
+
+## 📋 Próximos passos
+
+### Relatórios Avançados
+Relatórios detalhados por período e desempenho da equipe.
+
+### Exportação Excel e PDF
+Geração de arquivos para análise externa pelo cliente.`,
+
+        // 2 — Site Institucional
+        `## O que entregamos essa semana
+
+### Design e Identidade Visual
+✅ Paleta de cores e tipografia aprovadas pelo cliente na reunião de sexta.
+
+### Página Inicial
+✅ Hero animado, seção de serviços e depoimentos finalizados.
+
+### Portfólio
+✅ Galeria com filtros por categoria e lightbox funcionando perfeitamente.
+
+## Ainda em progresso
+
+### Formulário de Contato
+⚠️ Integração com servidor de e-mail ainda precisa de ajuste no SMTP.
+
+### Blog
+⚠️ CMS configurado, aguardando o cliente enviar os primeiros artigos.
+
+## Para fazer
+
+### SEO e Performance
+Otimização de imagens, meta tags e pontuação no Lighthouse.
+
+### Publicação
+Configuração de hospedagem, domínio e certificado SSL no servidor.`,
+
+        // 3 — App Mobile
+        `# Atualização do App — Sprint 4
+
+## Funcionalidades entregues
+✅ Login via e-mail e Google OAuth totalmente operacionais.
+✅ Calendário de agendamento com bloqueio de horários indisponíveis.
+✅ Tela de perfil do paciente com histórico completo de consultas.
+
+## Em desenvolvimento
+⚠️ Notificações push — configuradas para iOS, testes no Android em andamento.
+⚠️ Integração com prontuário eletrônico — API da clínica com instabilidade.
+
+## Próxima sprint
+- Chat com recepção via WebSocket
+- Build para lojas (TestFlight e Play Console)
+- Ajustes de acessibilidade (contraste e tamanho de fonte)`,
+
+        // 4 — E-commerce
+        `## Loja Virtual — Relatório Semanal
+
+### Entregue
+✅ Catálogo com filtros, busca e paginação funcionando.
+✅ Carrinho, checkout e cálculo de frete integrados ao Melhor Envio.
+✅ Gateway de pagamento com Pix, boleto e cartão aprovado em testes.
+
+### Em andamento
+⚠️ Área do cliente: dashboard de pedidos e endereços salvos.
+⚠️ Painel admin: gestão de estoque com alertas de nível mínimo.
+
+### Backlog
+- Programa de pontos e fidelidade
+- Integração com marketplace (Mercado Livre)
+- App mobile nativo`,
+
+        // 5 — Sistema Escolar
+        `# Atualização do Sistema Escolar
+
+## Módulos concluídos
+
+### Cadastro
+✅ Matrícula de alunos com validação de CPF e organização por turma e turno.
+
+### Notas
+✅ Lançamento de notas com médias automáticas e alertas de reprovação.
+
+### Chamada
+✅ Frequência digital por aula com relatório mensal de faltas.
+
+## Em desenvolvimento
+
+### Portal dos Pais
+⚠️ Tela de acompanhamento em revisão — aguardando feedback dos testes beta.
+
+### Boletins em PDF
+⚠️ Geração automática funciona, mas o layout ainda está sendo ajustado.
+
+## Próximos módulos
+
+### Comunicados e Agenda
+Avisos gerais e calendário de eventos para toda a escola.
+
+### App Mobile
+Aplicativo para pais com notificações de notas e frequência.`,
+      ];
+
+      function loadMdExample() {
+        const converterPanel = document.getElementById("converterPanel");
+        const isConverterOpen = !converterPanel.classList.contains("hidden");
+
+        if (isConverterOpen) {
+          const example = _examplesConverter[_exampleIndexConverter % _examplesConverter.length];
+          _exampleIndexConverter++;
+          document.getElementById("converterInput").value = example;
+          const len = example.length;
+          document.getElementById("converterInputCount").textContent = len.toLocaleString("pt-BR");
+          const total = _examplesConverter.length;
+          const current = ((_exampleIndexConverter - 1) % total) + 1;
+          showToast(`Exemplo ${current} de ${total} carregado!`);
+        } else {
+          const example = _examplesPaste[_exampleIndexPaste % _examplesPaste.length];
+          _exampleIndexPaste++;
+          document.getElementById("pasteMdTextarea").value = example;
+          updateCharCount();
+          const total = _examplesPaste.length;
+          const current = ((_exampleIndexPaste - 1) % total) + 1;
+          showToast(`Exemplo ${current} de ${total} carregado!`);
+        }
+      }
+
+      // ========== RECENT IMPORTS ==========
+      function addRecentImport(name, taskCount) {
+        const imports = JSON.parse(localStorage.getItem("nw_recent_imports") || "[]");
+        imports.unshift({
+          name,
+          taskCount,
+          date: new Date().toISOString(),
+        });
+        // Keep last 10
+        localStorage.setItem("nw_recent_imports", JSON.stringify(imports.slice(0, 10)));
+        loadRecentImports();
+      }
+
+      function loadRecentImports() {
+        const imports = JSON.parse(localStorage.getItem("nw_recent_imports") || "[]");
+        const container = document.getElementById("recentImportsList");
+
+        if (!imports.length) {
+          container.innerHTML = `
+            <div class="empty-state" style="padding: 16px">
+              <div class="empty-state-text">Nenhuma importação realizada ainda</div>
+            </div>`;
+          return;
+        }
+
+        container.innerHTML = imports
+          .map((imp) => {
+            const date = new Date(imp.date);
+            const timeAgo = getTimeAgo(date);
+            return `
+            <div class="recent-import-item">
+              <div class="recent-import-icon">
+                <i class="fa-solid fa-file-import"></i>
+              </div>
+              <div class="recent-import-info">
+                <div class="recent-import-name">${escapeHtml(imp.name)}</div>
+                <div class="recent-import-meta">${imp.taskCount} tarefas · ${timeAgo}</div>
+              </div>
+              <div class="recent-import-check">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+            </div>`;
+          })
+          .join("");
+      }
+
+      function formatDeadlineDate(dateStr) {
+        if (!dateStr) return "";
+        const [year, month, day] = dateStr.split("-");
+        return `${day}/${month}/${year}`;
+      }
+
+      function openPreviewModal() {
+        if (!currentReport) return;
+        const r = currentReport;
+        const tasks = (r.tasks || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        const typeLabels = { site: "Site", sistema: "Sistema", app: "Aplicativo", outro: "Outro" };
+        const statusLabels = {
+          "em-andamento": "Em Andamento",
+          concluido: "Concluído",
+          pausado: "Pausado",
+        };
+        const statusIcons = {
+          "em-andamento": "fa-spinner fa-spin-pulse",
+          concluido: "fa-circle-check",
+          pausado: "fa-pause",
+        };
+        const _plannedClr = getComputedStyle(document.documentElement)
+          .getPropertyValue("--planned-kanban")
+          .trim();
+        const statusConfig = {
+          planejado: { icon: "fa-clipboard-list", label: "Planejado", color: _plannedClr },
+          "em-andamento": { icon: "fa-spinner", label: "Em Andamento", color: "#3b82f6" },
+          concluido: { icon: "fa-circle-check", label: "Concluído", color: "#03fa6e" },
+          corrigir: { icon: "fa-triangle-exclamation", label: "Corrigir", color: "#f59e0b" },
+        };
+
+        const total = tasks.length;
+        const done = tasks.filter((t) => t.status === "concluido").length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        const planned = tasks.filter((t) => t.status === "planejado").length;
+        const inProgress = tasks.filter((t) => t.status === "em-andamento").length;
+        const toFix = tasks.filter((t) => t.status === "corrigir").length;
+
+        const kanbanCols = ["planejado", "em-andamento", "concluido", "corrigir"];
+        const tasksHTML = `<div class="kanban-board">${kanbanCols
+          .map((status) => {
+            const cfg = statusConfig[status];
+            const colTasks = tasks.filter((t) => t.status === status);
+            const cards = colTasks.length
+              ? colTasks
+                  .map(
+                    (task) => `
+                <div class="task-card task-${status}">
+                  <div class="task-body">
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                    ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ""}
+                  </div>
+                </div>`,
+                  )
+                  .join("")
+              : `<div class="kanban-empty"><i class="fa-solid fa-inbox"></i>Nenhuma</div>`;
+            return `
+            <div class="kanban-column" style="border-top: 3px solid ${cfg.color}">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title" style="color:${cfg.color}"><span class="kanban-col-dot" style="background:${cfg.color}"></span>${cfg.label}</div>
+                <span class="kanban-col-count" style="background:${cfg.color}18; color:${cfg.color}">${colTasks.length}</span>
+              </div>
+              <div class="kanban-col-body">${cards}</div>
+            </div>`;
+          })
+          .join("")}</div>`;
+
+        document.getElementById("previewModalContent").innerHTML = `
+          <div class="report-content">
+            <div class="project-info-card">
+              <div class="project-info-header">
+                <div>
+                  <h1 class="project-name">${escapeHtml(r.projectName || "Projeto")}</h1>
+                  <p class="project-client"><i class="fa-solid fa-user"></i> ${escapeHtml(r.clientName || "")}</p>
+                </div>
+                <div class="project-badges">
+                  <span class="badge badge-type"><i class="fa-solid fa-code"></i> ${typeLabels[r.projectType] || "Projeto"}</span>
+                  <span class="badge badge-status badge-${r.status || "em-andamento"}"><i class="fa-solid ${statusIcons[r.status] || "fa-spinner"}"></i> ${statusLabels[r.status] || "Em Andamento"}</span>
+                  ${r.deadline ? `<span class="badge badge-deadline"><i class="fa-solid fa-calendar-days"></i> Prazo: ${formatDeadlineDate(r.deadline)}</span>` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="progress-section">
+              <div class="progress-header">
+                <span class="progress-label">Progresso Geral</span>
+                <span class="progress-value">${pct}%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill ${pct === 100 ? "complete" : ""}" style="width:${pct}%"></div></div>
+            </div>
+            <div class="task-summary-cards">
+              <div class="summary-card summary-planned">
+                <div class="summary-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                <div class="summary-number">${planned}</div>
+                <div class="summary-label">Planejado</div>
+              </div>
+              <div class="summary-card summary-progress">
+                <div class="summary-icon"><i class="fa-solid fa-spinner"></i></div>
+                <div class="summary-number">${inProgress}</div>
+                <div class="summary-label">Em Andamento</div>
+              </div>
+              <div class="summary-card summary-done">
+                <div class="summary-icon"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="summary-number">${done}</div>
+                <div class="summary-label">Concluído</div>
+              </div>
+              <div class="summary-card summary-fix">
+                <div class="summary-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="summary-number">${toFix}</div>
+                <div class="summary-label">Corrigir</div>
+              </div>
+            </div>
+            ${
+              r.notes && r.notes.trim()
+                ? `
+            <div class="notes-section">
+              <h3 class="notes-title"><i class="fa-solid fa-note-sticky"></i> Observações</h3>
+              <p class="notes-content">${escapeHtml(r.notes)}</p>
+            </div>`
+                : ""
+            }
+            <div class="tasks-list">
+              ${tasksHTML || `<div class="empty-state"><div class="empty-state-icon"><i class="fa-solid fa-inbox"></i></div><div class="empty-state-text">Nenhuma tarefa adicionada</div></div>`}
+            </div>
+          </div>
+        `;
+
+        document.getElementById("previewModalOverlay").classList.add("active");
+      }
+
+      function closePreviewModal() {
+        document.getElementById("previewModalOverlay").classList.remove("active");
+      }
+
+      function getTimeAgo(date) {
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return "agora";
+        if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d atrás`;
+        return date.toLocaleDateString("pt-BR");
+      }
+    </script>
+  </body>
+</html>
