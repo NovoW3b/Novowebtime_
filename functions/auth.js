@@ -20,7 +20,7 @@ function verifyAdmin(context) {
   if (!context.auth) {
     throw new functions.https.HttpsError(
       "unauthenticated",
-      "Acesso negado: autenticação de administrador necessária."
+      "Acesso negado: autenticação de administrador necessária.",
     );
   }
 }

@@ -62,13 +62,14 @@
     // Converte Date → ISO string para serialização correta via HTTPS
     const payload = {
       fullName: appointmentData.fullName,
-      email:    appointmentData.email,
-      phone:    appointmentData.phone,
-      reason:   appointmentData.reason,
-      time:     appointmentData.time,
-      date: appointmentData.date instanceof Date
-        ? appointmentData.date.toISOString()
-        : appointmentData.date,
+      email: appointmentData.email,
+      phone: appointmentData.phone,
+      reason: appointmentData.reason,
+      time: appointmentData.time,
+      date:
+        appointmentData.date instanceof Date
+          ? appointmentData.date.toISOString()
+          : appointmentData.date,
     };
 
     try {
@@ -87,7 +88,9 @@
         throw e;
       }
       if (err.code === "functions/invalid-argument") {
-        const e = new Error(err.message || "Dados invalidos. Verifique os campos e tente novamente.");
+        const e = new Error(
+          err.message || "Dados invalidos. Verifique os campos e tente novamente.",
+        );
         e.code = "validation-error";
         throw e;
       }

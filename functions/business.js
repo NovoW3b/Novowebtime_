@@ -18,8 +18,15 @@ const admin = require("firebase-admin");
 // Horários disponíveis aceitos pelo sistema.
 // IMPORTANTE: manter sincronizado com a lista `availableHours` do index.html.
 const VALID_HOURS = [
-  "08:00", "09:00", "10:00", "11:00",
-  "13:00", "14:00", "15:00", "16:00", "17:00",
+  "08:00",
+  "09:00",
+  "10:00",
+  "11:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
 ];
 
 // Rate limiting: máx de agendamentos por e-mail dentro da janela de tempo
@@ -56,17 +63,20 @@ function buildDeterministicId(dateObj, timeStr) {
 exports.createAppointment = functions.https.onCall(async (data, _context) => {
   // ── 1. Validação server-side ──────────────────────────────────────────────
   const fullName = (data.fullName || "").trim();
-  const email    = (data.email    || "").trim().toLowerCase();
-  const phone    = (data.phone    || "").trim();
-  const reason   = (data.reason   || "").trim();
-  const timeStr  = (data.time     || "").trim();
+  const email = (data.email || "").trim().toLowerCase();
+  const phone = (data.phone || "").trim();
+  const reason = (data.reason || "").trim();
+  const timeStr = (data.time || "").trim();
   const dateInput = data.date;
 
   if (!fullName) {
     throw new functions.https.HttpsError("invalid-argument", "Nome completo é obrigatório.");
   }
   if (!fullName || fullName.length > 120) {
-    throw new functions.https.HttpsError("invalid-argument", "Nome inválido (máx. 120 caracteres).");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Nome inválido (máx. 120 caracteres).",
+    );
   }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new functions.https.HttpsError("invalid-argument", "E-mail inválido.");
@@ -75,7 +85,10 @@ exports.createAppointment = functions.https.onCall(async (data, _context) => {
     throw new functions.https.HttpsError("invalid-argument", "Telefone inválido.");
   }
   if (reason.length > 500) {
-    throw new functions.https.HttpsError("invalid-argument", "Motivo muito longo (máx. 500 caracteres).");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Motivo muito longo (máx. 500 caracteres).",
+    );
   }
   if (!timeStr || !VALID_HOURS.includes(timeStr)) {
     throw new functions.https.HttpsError("invalid-argument", "Horário inválido.");
@@ -96,7 +109,7 @@ exports.createAppointment = functions.https.onCall(async (data, _context) => {
   if (dateObj < hoje) {
     throw new functions.https.HttpsError(
       "invalid-argument",
-      "Não é possível agendar para datas no passado."
+      "Não é possível agendar para datas no passado.",
     );
   }
 
@@ -104,10 +117,7 @@ exports.createAppointment = functions.https.onCall(async (data, _context) => {
   const maxFuturo = new Date();
   maxFuturo.setFullYear(maxFuturo.getFullYear() + 1);
   if (dateObj > maxFuturo) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Data muito distante no futuro."
-    );
+    throw new functions.https.HttpsError("invalid-argument", "Data muito distante no futuro.");
   }
 
   const db = admin.firestore();
@@ -127,7 +137,7 @@ exports.createAppointment = functions.https.onCall(async (data, _context) => {
     if (recentes.length >= RATE_LIMIT_MAX) {
       throw new functions.https.HttpsError(
         "resource-exhausted",
-        "Muitos agendamentos em pouco tempo. Tente novamente em 1 hora."
+        "Muitos agendamentos em pouco tempo. Tente novamente em 1 hora.",
       );
     }
 
@@ -151,7 +161,7 @@ exports.createAppointment = functions.https.onCall(async (data, _context) => {
     if (snap.exists) {
       throw new functions.https.HttpsError(
         "already-exists",
-        "Este horário já está reservado. Por favor, escolha outro."
+        "Este horário já está reservado. Por favor, escolha outro.",
       );
     }
 

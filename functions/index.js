@@ -100,10 +100,7 @@ const { createAppointment } = require("./business");
 exports.createAppointment = createAppointment;
 
 function buildEmailHtml(data, appointmentId) {
-  const date =
-    data.date && data.date.toDate
-      ? data.date.toDate().toLocaleDateString("pt-BR")
-      : "";
+  const date = data.date && data.date.toDate ? data.date.toDate().toLocaleDateString("pt-BR") : "";
 
   return `
     <div style="font-family: Arial, sans-serif; color: #111;">

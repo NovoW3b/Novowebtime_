@@ -10,7 +10,12 @@
 
 function getConfig() {
   const parseEmails = (str) =>
-    str ? str.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    str
+      ? str
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
 
   return {
     sendgrid: {
