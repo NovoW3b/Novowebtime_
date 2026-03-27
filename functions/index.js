@@ -6,18 +6,6 @@ const { getConfig } = require("./config");
 // Inicializa o Firebase Admin SDK (deve ser chamado apenas uma vez)
 admin.initializeApp();
 
-// Carrega configuracao centralizada (chaves lidas do firebase functions:config)
-const cfg = getConfig();
-
-if (!cfg.sendgrid.key) {
-  console.warn(
-    "Chave SendGrid nao configurada (sendgrid.key). E-mails vao falhar ate ser configurada.\n" +
-    "Execute: firebase functions:config:set sendgrid.key=\"SUA_CHAVE\""
-  );
-} else {
-  sgMail.setApiKey(cfg.sendgrid.key);
-}
-
 /**
  * Cloud Function: sendAppointmentEmail
  * Trigger: Firestore onCreate - dispara quando um novo agendamento e criado.
@@ -26,6 +14,9 @@ if (!cfg.sendgrid.key) {
  *  - Idempotente: nao reenvia se emailSent ja for true no documento
  *  - Envia e-mail formatado com os dados do agendamento
  *  - Atualiza o documento com emailSent, emailSentAt, emailStatus
+ *
+ * A chave SendGrid e lida de process.env.SENDGRID_KEY, injetada pelo Firebase
+ * a partir do arquivo functions/.env.timenovoweb (nunca commitado no git).
  */
 exports.sendAppointmentEmail = functions.firestore
   .document("appointments/{id}")
@@ -33,6 +24,7 @@ exports.sendAppointmentEmail = functions.firestore
     const data = snap.data() || {};
     const docRef = snap.ref;
     const appointmentId = context.params.id;
+    const cfg = getConfig();
 
     try {
       // Idempotencia: nao reenviar se o e-mail ja foi enviado
@@ -43,7 +35,7 @@ exports.sendAppointmentEmail = functions.firestore
 
       const adminEmails = cfg.admin.emails;
       if (!adminEmails.length) {
-        console.error("Nenhum e-mail admin configurado. Execute: firebase functions:config:set admin.emails=\"email@ex.com\"");
+        console.error("Nenhum e-mail admin configurado (ADMIN_EMAILS em .env).");
         await docRef.update({
           emailStatus: "no_recipients",
           emailAttemptedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -51,14 +43,18 @@ exports.sendAppointmentEmail = functions.firestore
         return null;
       }
 
-      if (!cfg.sendgrid.key) {
-        console.error("Chave SendGrid ausente; e-mail nao pode ser enviado.");
+      const key = process.env.SENDGRID_KEY;
+      if (!key || key.startsWith("CONFIGURAR")) {
+        console.error("Chave SendGrid ausente ou invalida; e-mail nao pode ser enviado.");
         await docRef.update({
           emailStatus: "no_api_key",
           emailAttemptedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         return null;
       }
+
+      // Configura o SendGrid com a chave do arquivo .env
+      sgMail.setApiKey(key);
 
       // Monta e envia o e-mail
       const subject = `Novo agendamento: ${data.fullName || "Cliente"} - ${data.time || ""}`;
@@ -71,7 +67,7 @@ exports.sendAppointmentEmail = functions.firestore
         html,
       });
 
-      console.log(`E-mail enviado para agendamento ${appointmentId} -> ${adminEmails.join(",")}`);
+      console.log(`E-mail enviado para ${appointmentId} -> ${adminEmails.join(",")}`);
 
       // Marca como enviado
       await docRef.update({

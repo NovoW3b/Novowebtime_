@@ -1,45 +1,24 @@
-/**
- * config.js — Centraliza todas as configurações sensíveis do backend.
+﻿/**
+ * config.js — Centraliza configuracoes do backend.
  *
- * As chaves NUNCA ficam no código. Configure-as com:
- *   firebase functions:config:set \
- *     admin.phone="5537991382659" \
- *     admin.emails="email1@ex.com,email2@ex.com" \
- *     sendgrid.key="SUA_CHAVE_SENDGRID" \
- *     sendgrid.from="no-reply@timenovoweb.com"
+ * Valores nao-sensiveis (phone, emails, sendgrid from) ficam em functions/.env
+ * A chave SendGrid fica no Google Secret Manager:
+ *   firebase functions:secrets:set SENDGRID_KEY
  *
- * Para testar localmente com o emulador, crie o arquivo
- *   functions/.runtimeconfig.json
- * com o conteúdo:
- *   {
- *     "admin": { "phone": "5537991382659", "emails": "email@ex.com" },
- *     "sendgrid": { "key": "SUA_CHAVE", "from": "no-reply@ex.com" }
- *   }
+ * Para testes locais, crie functions/.env.local com SENDGRID_KEY=SG.xxxx
  */
-const functions = require("firebase-functions");
 
 function getConfig() {
-  const raw = functions.config();
-  const sg = raw.sendgrid || {};
-  const adm = raw.admin || {};
-
-  // E-mails separados por vírgula → array limpo
   const parseEmails = (str) =>
     str ? str.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
-  const sendgridAdmins = parseEmails(sg.admins);
-  const adminEmails = adm.emails ? parseEmails(adm.emails) : sendgridAdmins;
-
   return {
     sendgrid: {
-      key: sg.key || null,
-      from: sg.from || "no-reply@example.com",
-      admins: sendgridAdmins,
+      from: process.env.SENDGRID_FROM || "no-reply@example.com",
     },
     admin: {
-      // Telefone do WhatsApp do admin (somente dígitos, com DDI)
-      phone: adm.phone || "",
-      emails: adminEmails,
+      phone: process.env.ADMIN_PHONE || "",
+      emails: parseEmails(process.env.ADMIN_EMAILS),
     },
   };
 }
