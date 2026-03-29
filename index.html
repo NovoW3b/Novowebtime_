@@ -219,15 +219,7 @@
             <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
               <i id="themeIcon" class="fa-solid fa-moon" aria-hidden="true"></i>
             </button>
-            <button
-              class="btn btn-outline btn-small"
-              id="adminBtn"
-              aria-label="Admin"
-              title="Entrar como administrador"
-            >
-              <i id="adminIcon" class="fa-solid fa-user-shield" aria-hidden="true"></i>
-              <span id="adminBtnLabel"></span>
-            </button>
+
           </div>
         </header>
 
@@ -1265,9 +1257,13 @@
 
       function handleRoute() {
         const hash = window.location.hash;
+        // Acesso admin desativado temporariamente
         if (hash === "#admin") {
+          window.location.hash = "";
+          return;
+        }
+        if (false && hash === "#admin") {
           if (isAdmin) {
-            // Já autenticado: limpa hash e fica no mainView
             window.location.hash = "";
             showView("mainView");
           } else {
@@ -1491,6 +1487,8 @@
       }
 
       function handleAdminLogin() {
+        // Login admin desativado temporariamente por segurança
+        return;
         const emailVal = (document.getElementById("adminEmailInput") || {}).value || "";
         const passVal = (document.getElementById("adminPasswordInput") || {}).value || "";
         const loginBtn = document.getElementById("adminLoginBtn");
