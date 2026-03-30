@@ -984,21 +984,36 @@
       // ========== RASTREAMENTO DE VISITANTES ==========
 
       /**
-       * Registra visita via Cloud Function (fire-and-forget).
-       * IP e geo lookup são feitos server-side — zero chamadas externas no cliente.
+       * Registra visita (fire-and-forget).
+       * Tenta Cloud Function primeiro (geo server-side, zero chamadas externas no cliente).
+       * Fallback: ipify apenas (1 chamada em vez de 2, sem ipapi.co lento/throttled).
        * Deduplicação por sessionStorage: uma entrada por sessão de navegação.
        */
       async function trackVisitor() {
         try {
           if (sessionStorage.getItem("nwt_visited")) return;
           sessionStorage.setItem("nwt_visited", "1");
-          const fn = firebase.app().functions("us-central1");
-          const track = fn.httpsCallable("trackVisit");
           const ua = navigator.userAgent || "";
-          await track({
-            page: window.location.href,
-            userAgent: ua,
-            isMobile: /Android|iPhone|iPad|iPod|Mobile/i.test(ua),
+          const page = window.location.href;
+          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+
+          // 1ª tentativa: Cloud Function (sem chamadas externas no cliente)
+          try {
+            const fn = firebase.app().functions("us-central1");
+            const track = fn.httpsCallable("trackVisit");
+            await track({ page, userAgent: ua, isMobile });
+            return; // sucesso — encerra
+          } catch (_) { /* fallback abaixo */ }
+
+          // Fallback: ipify apenas (sem ipapi.co — elimina a chamada lenta/throttled)
+          const ipRes = await fetch("https://api.ipify.org?format=json");
+          const { ip } = await ipRes.json();
+          const lsKey = `lastVisit_${ip}`;
+          if (Date.now() - parseInt(localStorage.getItem(lsKey) || "0", 10) < 30 * 60 * 1000) return;
+          localStorage.setItem(lsKey, String(Date.now()));
+          await db.collection("visitors").add({
+            ip, country: "", city: "", page, userAgent: ua, isMobile,
+            accessedAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
         } catch (_) {
           // Silencioso: erros de tracking não devem quebrar a página
