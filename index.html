@@ -16,6 +16,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
+    <!-- SheetJS: exportação Excel dos visitantes -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
     <!-- Google Analytics (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-13145333507"></script>
     <script>
@@ -38,6 +41,7 @@
       })();
     </script>
 
+    <link rel="stylesheet" href="style/design.css" />
     <link rel="stylesheet" href="public/style/design.css" />
     <!-- Favicons & PWA manifest -->
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png" />
@@ -491,13 +495,23 @@
                 <h2 class="resumo-page-title">Visitantes</h2>
                 <p class="resumo-page-subtitle">Registro de acessos ao site em tempo real</p>
               </div>
-              <div style="display: flex; gap: 8px; align-items: center">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
                 <span class="visitors-total-badge" id="visitorsTotalBadge">0 visitas</span>
+                <button class="btn btn-primary btn-small" id="visitorsExportBtn" type="button">
+                  <i class="fa-solid fa-file-excel"></i>
+                  Exportar Excel
+                </button>
                 <button class="btn btn-outline btn-small" id="visitorsRefreshBtn" type="button">
                   <i class="fa-solid fa-arrows-rotate"></i>
                   Atualizar
                 </button>
               </div>
+            </div>
+
+            <!-- Aviso ciclo de vida 24h -->
+            <div class="vis-expiry-notice" id="visExpiryNotice">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span>Dados armazenados por <strong>24 horas</strong>. Exporte a planilha antes que sejam apagados automaticamente. IPs iguais são agrupados em uma só linha.</span>
             </div>
 
             <!-- Stat cards -->
@@ -560,12 +574,12 @@
                 <table class="visitors-table">
                   <thead>
                     <tr>
-                      <th>Data / Hora</th>
-                      <th>IP</th>
+                      <th>IP <span style="font-weight:400;color:var(--muted)">(visitas)</span></th>
                       <th>País</th>
                       <th>Cidade</th>
-                      <th>Página</th>
-                      <th class="vis-col-ua">Navegador / Dispositivo</th>
+                      <th>Primeira visita</th>
+                      <th>Última visita</th>
+                      <th>Páginas visitadas</th>
                     </tr>
                   </thead>
                   <tbody id="visitorsTableBody">
@@ -750,6 +764,33 @@
         background: var(--surface-2, rgba(0, 0, 0, 0.06));
         border-radius: 4px;
         padding: 1px 5px;
+      }
+      .vis-count-badge {
+        display: inline-block;
+        background: var(--accent, #6366f1);
+        color: #fff;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 1px 7px;
+        vertical-align: middle;
+      }
+      .vis-expiry-notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--text);
+        margin-bottom: 18px;
+      }
+      .vis-expiry-notice i {
+        color: #d97706;
+        margin-top: 2px;
+        flex-shrink: 0;
       }
     </style>
 
@@ -974,7 +1015,6 @@
         if (page === "resumo") renderResumo();
         else if (page === "visitors") {
           _applyVisitorsTableState();
-          listenToVisitors(); // carrega listener sob demanda — só quando a aba é aberta
           renderVisitors();
         } else updateAppointmentsList();
 
@@ -984,39 +1024,58 @@
       // ========== RASTREAMENTO DE VISITANTES ==========
 
       /**
-       * Registra visita (fire-and-forget).
-       * Tenta Cloud Function primeiro (geo server-side, zero chamadas externas no cliente).
-       * Fallback: ipify apenas (1 chamada em vez de 2, sem ipapi.co lento/throttled).
-       * Deduplicação por sessionStorage: uma entrada por sessão de navegação.
+       * Captura IP via ipify, geolocalização via ipapi.co e salva no Firestore.
+       * Fire-and-forget: erros não afetam a experiência do visitante.
+       * Segurança: dados inseridos somente via regra Firestore (não é leitura pública).
        */
       async function trackVisitor() {
         try {
-          if (sessionStorage.getItem("nwt_visited")) return;
-          sessionStorage.setItem("nwt_visited", "1");
-          const ua = navigator.userAgent || "";
-          const page = window.location.href;
-          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+          if (typeof db === "undefined") return;
 
-          // 1ª tentativa: Cloud Function (sem chamadas externas no cliente)
-          try {
-            const fn = firebase.app().functions("us-central1");
-            const track = fn.httpsCallable("trackVisit");
-            await track({ page, userAgent: ua, isMobile });
-            return; // sucesso — encerra
-          } catch (_) { /* fallback abaixo */ }
-
-          // Fallback: ipify apenas (sem ipapi.co — elimina a chamada lenta/throttled)
+          // 1. Obtém IP público
           const ipRes = await fetch("https://api.ipify.org?format=json");
           const { ip } = await ipRes.json();
+
+          // 2. Obtém geolocalização (país, cidade)
+          let country = "";
+          let city = "";
+          try {
+            const geoRes = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
+            const geo = await geoRes.json();
+            country = geo.country_name || geo.country || "";
+            city = geo.city || "";
+          } catch (_) {
+            // geo é opcional — não bloqueia o registro
+          }
+
+          // 3. Parse simplificado do user-agent
+          const ua = navigator.userAgent || "";
+          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+
+          // 4. Deduplicação: evitar registrar o mesmo IP mais de 1x a cada 30 minutos
           const lsKey = `lastVisit_${ip}`;
-          if (Date.now() - parseInt(localStorage.getItem(lsKey) || "0", 10) < 30 * 60 * 1000) return;
+          const lastTs = parseInt(localStorage.getItem(lsKey) || "0", 10);
+          if (Date.now() - lastTs < 30 * 60 * 1000) {
+            console.debug("[trackVisitor] visita ignorada (mesmo IP < 30min)", { ip });
+            return;
+          }
           localStorage.setItem(lsKey, String(Date.now()));
+
+          // 5. Persiste no Firestore (write-only para visitantes, regra de segurança)
           await db.collection("visitors").add({
-            ip, country: "", city: "", page, userAgent: ua, isMobile,
+            ip,
+            country,
+            city,
+            page: window.location.href,
+            userAgent: ua,
+            isMobile,
             accessedAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
-        } catch (_) {
+
+          console.debug("[trackVisitor] visita registrada", { ip, country, city });
+        } catch (err) {
           // Silencioso: erros de tracking não devem quebrar a página
+          console.warn("[trackVisitor] Não foi possível registrar visita:", err.message);
         }
       }
 
@@ -1053,10 +1112,13 @@
         if (!isAdmin || typeof db === "undefined") return;
         if (_unsubVisitors) return; // já ouvindo
 
+        // Limpeza automática: apaga visitas com mais de 24h ao ativar o painel
+        cleanupOldVisitors();
+
         _unsubVisitors = db
           .collection("visitors")
           .orderBy("accessedAt", "desc")
-          .limit(100)
+          .limit(500)
           .onSnapshot(
             (snap) => {
               _visitorsData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -1083,7 +1145,123 @@
       }
 
       /**
+       * Agrupa entradas de visitantes pelo mesmo IP.
+       * Retorna lista ordenada por última visita (mais recente primeiro).
+       */
+      function buildVisitorGroups(data) {
+        const map = {};
+        data.forEach((v) => {
+          const ip = v.ip || "desconhecido";
+          if (!map[ip]) {
+            map[ip] = {
+              ip,
+              country: v.country || "",
+              city: v.city || "",
+              firstAccess: v.accessedAt,
+              lastAccess: v.accessedAt,
+              visits: 0,
+              isMobile: false,
+              userAgent: v.userAgent || "",
+              pages: new Set(),
+            };
+          }
+          const g = map[ip];
+          g.visits++;
+          const ts = v.accessedAt && v.accessedAt.toDate ? v.accessedAt.toDate() : null;
+          const firstTs = g.firstAccess && g.firstAccess.toDate ? g.firstAccess.toDate() : null;
+          const lastTs = g.lastAccess && g.lastAccess.toDate ? g.lastAccess.toDate() : null;
+          if (ts && firstTs && ts < firstTs) g.firstAccess = v.accessedAt;
+          if (ts && lastTs && ts > lastTs) {
+            g.lastAccess = v.accessedAt;
+            g.userAgent = v.userAgent || g.userAgent;
+          }
+          if (v.isMobile) g.isMobile = true;
+          if (v.page) {
+            const path = v.page.replace(/^https?:\/\/[^/]+/, "") || "/";
+            g.pages.add(path);
+          }
+        });
+        return Object.values(map).sort((a, b) => {
+          const ta = a.lastAccess && a.lastAccess.toDate ? a.lastAccess.toDate().getTime() : 0;
+          const tb = b.lastAccess && b.lastAccess.toDate ? b.lastAccess.toDate().getTime() : 0;
+          return tb - ta;
+        });
+      }
+
+      /**
+       * Exclui do Firestore todos os documentos da coleção visitors
+       * com accessedAt anterior a 24h atrás. Executa apenas uma vez por sessão.
+       */
+      let _cleanupDone = false;
+      async function cleanupOldVisitors() {
+        if (!isAdmin || typeof db === "undefined" || _cleanupDone) return;
+        _cleanupDone = true;
+        try {
+          const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          let snap = await db.collection("visitors")
+            .where("accessedAt", "<", cutoff)
+            .limit(400)
+            .get();
+          let totalDeleted = 0;
+          while (!snap.empty) {
+            const batch = db.batch();
+            snap.docs.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+            totalDeleted += snap.docs.length;
+            snap = await db.collection("visitors")
+              .where("accessedAt", "<", cutoff)
+              .limit(400)
+              .get();
+          }
+          if (totalDeleted > 0)
+            console.log(`[cleanup] ${totalDeleted} visitas com +24h removidas do Firestore.`);
+        } catch (err) {
+          console.warn("[cleanup] Erro ao limpar visitas antigas:", err.message);
+        }
+      }
+
+      /**
+       * Exporta os dados de visitantes agrupados por IP para uma planilha .xlsx.
+       * Requer SheetJS carregado via CDN.
+       */
+      function exportVisitorsToExcel() {
+        if (typeof XLSX === "undefined") {
+          alert("Biblioteca XLSX não carregada. Recarregue a página e tente novamente.");
+          return;
+        }
+        const data = _visitorsData;
+        if (!data.length) {
+          alert("Nenhum dado de visitantes para exportar.");
+          return;
+        }
+        const groups = buildVisitorGroups(data);
+        const rows = groups.map((g) => ({
+          "IP": g.ip,
+          "País": g.country || "—",
+          "Cidade": g.city || "—",
+          "Total de Visitas": g.visits,
+          "Primeira Visita": g.firstAccess && g.firstAccess.toDate
+            ? g.firstAccess.toDate().toLocaleString("pt-BR") : "—",
+          "Última Visita": g.lastAccess && g.lastAccess.toDate
+            ? g.lastAccess.toDate().toLocaleString("pt-BR") : "—",
+          "Dispositivo": g.isMobile ? "Mobile" : "Desktop",
+          "Páginas Visitadas": [...g.pages].join(" | "),
+          "User Agent": g.userAgent || "—",
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const colWidths = Object.keys(rows[0] || {}).map((k) => ({
+          wch: Math.min(60, Math.max(k.length + 2, ...rows.slice(0, 30).map((r) => String(r[k] || "").length + 1))),
+        }));
+        ws["!cols"] = colWidths;
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Visitantes");
+        const today = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
+        XLSX.writeFile(wb, `visitantes-novoweb-${today}.xlsx`);
+      }
+
+      /**
        * Renderiza a tabela e os 4 stat-cards do painel de visitantes.
+       * Exibe uma linha por IP único (agrupado).
        */
       function renderVisitors() {
         const tbody = document.getElementById("visitorsTableBody");
@@ -1095,8 +1273,9 @@
         if (!tbody) return;
 
         const data = _visitorsData;
+        const groups = buildVisitorGroups(data);
 
-        // --- Stat cards ---
+        // --- Stat cards (dados brutos para totais precisos) ---
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -1108,35 +1287,34 @@
         const mobileCount = data.filter((v) => v.isMobile).length;
         const countries = new Set(data.map((v) => v.country).filter(Boolean));
 
-        if (totalBadge) totalBadge.textContent = `${data.length} visitas`;
+        if (totalBadge)
+          totalBadge.textContent = `${data.length} visita${data.length !== 1 ? "s" : ""} · ${groups.length} IP${groups.length !== 1 ? "s" : ""} único${groups.length !== 1 ? "s" : ""}`;
         if (statTotal) statTotal.textContent = data.length;
         if (statToday) statToday.textContent = todayCount;
         if (statMobile) statMobile.textContent = mobileCount;
         if (statCountries) statCountries.textContent = countries.size;
 
-        // --- Tabela ---
-        if (!data.length) {
+        // --- Tabela agrupada por IP ---
+        if (!groups.length) {
           tbody.innerHTML = `<tr><td colspan="6" class="visitors-empty"><i class="fa-solid fa-eye-slash"></i> Nenhuma visita registrada ainda.</td></tr>`;
           return;
         }
 
-        tbody.innerHTML = data
-          .map((v) => {
-            const ts =
-              v.accessedAt && v.accessedAt.toDate
-                ? v.accessedAt.toDate().toLocaleString("pt-BR")
-                : "—";
-            const flag = v.country ? `&#127462;` : ""; // placeholder; sem dep. externa
+        tbody.innerHTML = groups
+          .map((g) => {
+            const firstTs = g.firstAccess && g.firstAccess.toDate
+              ? g.firstAccess.toDate().toLocaleString("pt-BR") : "—";
+            const lastTs = g.lastAccess && g.lastAccess.toDate
+              ? g.lastAccess.toDate().toLocaleString("pt-BR") : "—";
+            const pages = [...g.pages].join(", ") || "/";
             return `
               <tr>
-                <td style="white-space:nowrap;font-size:12px;">${escHtml(ts)}</td>
-                <td><span class="vis-ip-badge">${escHtml(v.ip || "—")}</span></td>
-                <td style="font-size:12px;">${escHtml(v.country || "—")}</td>
-                <td style="font-size:12px;">${escHtml(v.city || "—")}</td>
-                <td><span class="vis-page-url" title="${escHtml(v.page || "")}">${escHtml(
-                  (v.page || "").replace(/^https?:\/\/[^/]+/, "") || "/",
-                )}</span></td>
-                <td class="vis-col-ua"><span class="vis-ua-text" title="${escHtml(v.userAgent || "")}">${escHtml(v.userAgent || "—")}</span></td>
+                <td><span class="vis-ip-badge">${escHtml(g.ip)}</span>&nbsp;<span class="vis-count-badge">${g.visits}x</span></td>
+                <td style="font-size:12px;">${escHtml(g.country || "—")}</td>
+                <td style="font-size:12px;">${escHtml(g.city || "—")}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escHtml(firstTs)}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escHtml(lastTs)}</td>
+                <td><span class="vis-page-url" title="${escHtml(pages)}">${escHtml(pages)}</span></td>
               </tr>`;
           })
           .join("");
@@ -1284,7 +1462,7 @@
 
           if (isAdmin) {
             document.documentElement.classList.add("admin-mode");
-            // Listener de visitantes carregado sob demanda (ao abrir a aba Visitantes)
+            if (!_visitorsTableCollapsed) listenToVisitors(); // só inicia listener se tabela estiver expandida (modo leve)
             // Se autenticou a partir da tela de login, redireciona para a view principal
             const loginView = document.getElementById("adminLoginView");
             if (loginView && loginView.classList.contains("active")) {
@@ -2437,6 +2615,14 @@
           mobileToggle.addEventListener("click", openMobileSidebar);
         }
 
+        // Botão exportar visitantes para Excel
+        const visitorsExportBtn = document.getElementById("visitorsExportBtn");
+        if (visitorsExportBtn) {
+          visitorsExportBtn.addEventListener("click", () => {
+            exportVisitorsToExcel();
+          });
+        }
+
         // Botão de atualizar visitantes
         const visitorsRefreshBtn = document.getElementById("visitorsRefreshBtn");
         if (visitorsRefreshBtn) {
@@ -2487,14 +2673,6 @@
 
         const backToMainBtn = document.getElementById("backToMainBtn");
         if (backToMainBtn) backToMainBtn.addEventListener("click", closeAdminModal);
-
-        const visitorsRefreshBtn = document.getElementById("visitorsRefreshBtn");
-        if (visitorsRefreshBtn) {
-          visitorsRefreshBtn.addEventListener("click", () => {
-            _pauseVisitorsListener();
-            listenToVisitors();
-          });
-        }
 
         document.getElementById("prevMonth").addEventListener("click", () => {
           currentDate.setMonth(currentDate.getMonth() - 1);

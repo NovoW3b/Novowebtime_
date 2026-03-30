@@ -35,8 +35,10 @@
       const fn = functionsInstance.httpsCallable("getAdminContact");
       const result = await fn();
       window._adminContact = result.data || { phone: "", emails: [] };
-    } catch (_) {
-      // Silencioso: Cloud Functions indisponíveis não bloqueiam a página
+      console.debug("[app.js] Contato admin carregado com sucesso.");
+    } catch (err) {
+      // Não bloqueia o carregamento da página — apenas loga o aviso
+      console.warn("[app.js] Nao foi possivel carregar contato admin:", err.message);
     }
   };
 
