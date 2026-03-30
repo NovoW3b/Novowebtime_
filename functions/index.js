@@ -99,6 +99,43 @@ exports.getAdminContact = getAdminContact;
 const { createAppointment } = require("./business");
 exports.createAppointment = createAppointment;
 
+// HTTPS callable: registra visita com IP do servidor — zero chamadas externas no cliente
+// O IP real do visitante vem do header da requisição (X-Forwarded-For injetado pelo Firebase)
+exports.trackVisit = functions.https.onCall(async (data, context) => {
+  try {
+    const rawIp = context.rawRequest
+      ? String(context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.ip || "")
+      : "";
+    const ip = rawIp.split(",")[0].trim();
+
+    // Geo lookup server-side: sem rate limit no cliente, sem latência para o visitante
+    let country = "", city = "";
+    if (ip && ip !== "::1" && ip !== "127.0.0.1") {
+      try {
+        const geoRes = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
+        const geo = await geoRes.json();
+        country = geo.country_name || geo.country || "";
+        city = geo.city || "";
+      } catch (_) { /* geo opcional */ }
+    }
+
+    await admin.firestore().collection("visitors").add({
+      ip: ip || "unknown",
+      country,
+      city,
+      page: String(data.page || "").slice(0, 500),
+      userAgent: String(data.userAgent || "").slice(0, 500),
+      isMobile: !!data.isMobile,
+      accessedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { ok: true };
+  } catch (err) {
+    console.error("[trackVisit]", err);
+    return { ok: false };
+  }
+});
+
 function buildEmailHtml(data, appointmentId) {
   const date = data.date && data.date.toDate ? data.date.toDate().toLocaleDateString("pt-BR") : "";
 

@@ -38,7 +38,6 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="style/design.css" />
     <link rel="stylesheet" href="public/style/design.css" />
     <!-- Favicons & PWA manifest -->
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png" />
@@ -975,6 +974,7 @@
         if (page === "resumo") renderResumo();
         else if (page === "visitors") {
           _applyVisitorsTableState();
+          listenToVisitors(); // carrega listener sob demanda — só quando a aba é aberta
           renderVisitors();
         } else updateAppointmentsList();
 
@@ -984,58 +984,24 @@
       // ========== RASTREAMENTO DE VISITANTES ==========
 
       /**
-       * Captura IP via ipify, geolocalização via ipapi.co e salva no Firestore.
-       * Fire-and-forget: erros não afetam a experiência do visitante.
-       * Segurança: dados inseridos somente via regra Firestore (não é leitura pública).
+       * Registra visita via Cloud Function (fire-and-forget).
+       * IP e geo lookup são feitos server-side — zero chamadas externas no cliente.
+       * Deduplicação por sessionStorage: uma entrada por sessão de navegação.
        */
       async function trackVisitor() {
         try {
-          if (typeof db === "undefined") return;
-
-          // 1. Obtém IP público
-          const ipRes = await fetch("https://api.ipify.org?format=json");
-          const { ip } = await ipRes.json();
-
-          // 2. Obtém geolocalização (país, cidade)
-          let country = "";
-          let city = "";
-          try {
-            const geoRes = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
-            const geo = await geoRes.json();
-            country = geo.country_name || geo.country || "";
-            city = geo.city || "";
-          } catch (_) {
-            // geo é opcional — não bloqueia o registro
-          }
-
-          // 3. Parse simplificado do user-agent
+          if (sessionStorage.getItem("nwt_visited")) return;
+          sessionStorage.setItem("nwt_visited", "1");
+          const fn = firebase.app().functions("us-central1");
+          const track = fn.httpsCallable("trackVisit");
           const ua = navigator.userAgent || "";
-          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-
-          // 4. Deduplicação: evitar registrar o mesmo IP mais de 1x a cada 30 minutos
-          const lsKey = `lastVisit_${ip}`;
-          const lastTs = parseInt(localStorage.getItem(lsKey) || "0", 10);
-          if (Date.now() - lastTs < 30 * 60 * 1000) {
-            console.debug("[trackVisitor] visita ignorada (mesmo IP < 30min)", { ip });
-            return;
-          }
-          localStorage.setItem(lsKey, String(Date.now()));
-
-          // 5. Persiste no Firestore (write-only para visitantes, regra de segurança)
-          await db.collection("visitors").add({
-            ip,
-            country,
-            city,
+          await track({
             page: window.location.href,
             userAgent: ua,
-            isMobile,
-            accessedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isMobile: /Android|iPhone|iPad|iPod|Mobile/i.test(ua),
           });
-
-          console.debug("[trackVisitor] visita registrada", { ip, country, city });
-        } catch (err) {
+        } catch (_) {
           // Silencioso: erros de tracking não devem quebrar a página
-          console.warn("[trackVisitor] Não foi possível registrar visita:", err.message);
         }
       }
 
@@ -1075,7 +1041,7 @@
         _unsubVisitors = db
           .collection("visitors")
           .orderBy("accessedAt", "desc")
-          .limit(500)
+          .limit(100)
           .onSnapshot(
             (snap) => {
               _visitorsData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -1303,7 +1269,7 @@
 
           if (isAdmin) {
             document.documentElement.classList.add("admin-mode");
-            if (!_visitorsTableCollapsed) listenToVisitors(); // só inicia listener se tabela estiver expandida (modo leve)
+            // Listener de visitantes carregado sob demanda (ao abrir a aba Visitantes)
             // Se autenticou a partir da tela de login, redireciona para a view principal
             const loginView = document.getElementById("adminLoginView");
             if (loginView && loginView.classList.contains("active")) {
@@ -2506,6 +2472,14 @@
 
         const backToMainBtn = document.getElementById("backToMainBtn");
         if (backToMainBtn) backToMainBtn.addEventListener("click", closeAdminModal);
+
+        const visitorsRefreshBtn = document.getElementById("visitorsRefreshBtn");
+        if (visitorsRefreshBtn) {
+          visitorsRefreshBtn.addEventListener("click", () => {
+            _pauseVisitorsListener();
+            listenToVisitors();
+          });
+        }
 
         document.getElementById("prevMonth").addEventListener("click", () => {
           currentDate.setMonth(currentDate.getMonth() - 1);
