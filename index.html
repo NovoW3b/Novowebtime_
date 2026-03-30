@@ -511,7 +511,12 @@
             <!-- Aviso ciclo de vida 24h -->
             <div class="vis-expiry-notice" id="visExpiryNotice">
               <i class="fa-solid fa-triangle-exclamation"></i>
-              <span>Dados armazenados por <strong>24 horas</strong>. Exporte a planilha antes que sejam apagados automaticamente. IPs iguais são agrupados em uma só linha.</span>
+              <span>
+                Dados armazenados por
+                <strong>24 horas</strong>
+                . Exporte a planilha antes que sejam apagados automaticamente. IPs iguais são
+                agrupados em uma só linha.
+              </span>
             </div>
 
             <!-- Stat cards -->
@@ -574,7 +579,10 @@
                 <table class="visitors-table">
                   <thead>
                     <tr>
-                      <th>IP <span style="font-weight:400;color:var(--muted)">(visitas)</span></th>
+                      <th>
+                        IP
+                        <span style="font-weight: 400; color: var(--muted)">(visitas)</span>
+                      </th>
                       <th>País</th>
                       <th>Cidade</th>
                       <th>Primeira visita</th>
@@ -1198,7 +1206,8 @@
         _cleanupDone = true;
         try {
           const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-          let snap = await db.collection("visitors")
+          let snap = await db
+            .collection("visitors")
             .where("accessedAt", "<", cutoff)
             .limit(400)
             .get();
@@ -1208,7 +1217,8 @@
             snap.docs.forEach((doc) => batch.delete(doc.ref));
             await batch.commit();
             totalDeleted += snap.docs.length;
-            snap = await db.collection("visitors")
+            snap = await db
+              .collection("visitors")
               .where("accessedAt", "<", cutoff)
               .limit(400)
               .get();
@@ -1236,21 +1246,28 @@
         }
         const groups = buildVisitorGroups(data);
         const rows = groups.map((g) => ({
-          "IP": g.ip,
-          "País": g.country || "—",
-          "Cidade": g.city || "—",
+          IP: g.ip,
+          País: g.country || "—",
+          Cidade: g.city || "—",
           "Total de Visitas": g.visits,
-          "Primeira Visita": g.firstAccess && g.firstAccess.toDate
-            ? g.firstAccess.toDate().toLocaleString("pt-BR") : "—",
-          "Última Visita": g.lastAccess && g.lastAccess.toDate
-            ? g.lastAccess.toDate().toLocaleString("pt-BR") : "—",
-          "Dispositivo": g.isMobile ? "Mobile" : "Desktop",
+          "Primeira Visita":
+            g.firstAccess && g.firstAccess.toDate
+              ? g.firstAccess.toDate().toLocaleString("pt-BR")
+              : "—",
+          "Última Visita":
+            g.lastAccess && g.lastAccess.toDate
+              ? g.lastAccess.toDate().toLocaleString("pt-BR")
+              : "—",
+          Dispositivo: g.isMobile ? "Mobile" : "Desktop",
           "Páginas Visitadas": [...g.pages].join(" | "),
           "User Agent": g.userAgent || "—",
         }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const colWidths = Object.keys(rows[0] || {}).map((k) => ({
-          wch: Math.min(60, Math.max(k.length + 2, ...rows.slice(0, 30).map((r) => String(r[k] || "").length + 1))),
+          wch: Math.min(
+            60,
+            Math.max(k.length + 2, ...rows.slice(0, 30).map((r) => String(r[k] || "").length + 1)),
+          ),
         }));
         ws["!cols"] = colWidths;
         const wb = XLSX.utils.book_new();
@@ -1302,10 +1319,14 @@
 
         tbody.innerHTML = groups
           .map((g) => {
-            const firstTs = g.firstAccess && g.firstAccess.toDate
-              ? g.firstAccess.toDate().toLocaleString("pt-BR") : "—";
-            const lastTs = g.lastAccess && g.lastAccess.toDate
-              ? g.lastAccess.toDate().toLocaleString("pt-BR") : "—";
+            const firstTs =
+              g.firstAccess && g.firstAccess.toDate
+                ? g.firstAccess.toDate().toLocaleString("pt-BR")
+                : "—";
+            const lastTs =
+              g.lastAccess && g.lastAccess.toDate
+                ? g.lastAccess.toDate().toLocaleString("pt-BR")
+                : "—";
             const pages = [...g.pages].join(", ") || "/";
             return `
               <tr>
