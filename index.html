@@ -20,7 +20,7 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-13145333507"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag() {
+      function gta1g() {
         dataLayer.push(arguments);
       }
       gtag("js", new Date());
@@ -38,13 +38,14 @@
       })();
     </script>
 
+    <link rel="stylesheet" href="style/design.css" />
     <link rel="stylesheet" href="public/style/design.css" />
     <!-- Favicons & PWA manifest -->
-    <link rel="icon" type="image/png" sizes="32x32" href="public/favicon/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="public/favicon/favicon-16x16.png" />
-    <link rel="shortcut icon" href="public/favicon/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="public/favicon/apple-touch-icon.png" />
-    <link rel="manifest" href="public/favicon/site.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png" />
+    <link rel="shortcut icon" href="favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+    <link rel="manifest" href="favicon/site.webmanifest" />
     <!-- Contato admin carregado via Cloud Function (não fica exposto no HTML) -->
     <!-- Font Awesome Free — carregamento não-bloqueante (performance) -->
     <link
@@ -208,7 +209,7 @@
           <!-- Título desktop -->
           <div class="header-title" id="headerTitle">
             Agende sua Reunião
-            <span class="product-badge product-badge--header">Time</span>
+            <!-- <span class="product-badge product-badge--header">Time</span>-->
           </div>
 
           <div class="header-controls">
@@ -219,7 +220,15 @@
             <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
               <i id="themeIcon" class="fa-solid fa-moon" aria-hidden="true"></i>
             </button>
-
+            <button
+              class="btn btn-outline btn-small"
+              id="adminBtn"
+              aria-label="Admin"
+              title="Entrar como administrador"
+            >
+              <i id="adminIcon" class="fa-solid fa-user-shield" aria-hidden="true"></i>
+              <span id="adminBtnLabel"></span>
+            </button>
           </div>
         </header>
 
@@ -1007,6 +1016,7 @@
           const lsKey = `lastVisit_${ip}`;
           const lastTs = parseInt(localStorage.getItem(lsKey) || "0", 10);
           if (Date.now() - lastTs < 30 * 60 * 1000) {
+            console.debug("[trackVisitor] visita ignorada (mesmo IP < 30min)", { ip });
             return;
           }
           localStorage.setItem(lsKey, String(Date.now()));
@@ -1022,8 +1032,10 @@
             accessedAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
 
-        } catch (_) {
+          console.debug("[trackVisitor] visita registrada", { ip, country, city });
+        } catch (err) {
           // Silencioso: erros de tracking não devem quebrar a página
+          console.warn("[trackVisitor] Não foi possível registrar visita:", err.message);
         }
       }
 
@@ -1257,13 +1269,9 @@
 
       function handleRoute() {
         const hash = window.location.hash;
-        // Acesso admin desativado temporariamente
         if (hash === "#admin") {
-          window.location.hash = "";
-          return;
-        }
-        if (false && hash === "#admin") {
           if (isAdmin) {
+            // Já autenticado: limpa hash e fica no mainView
             window.location.hash = "";
             showView("mainView");
           } else {
@@ -1487,8 +1495,6 @@
       }
 
       function handleAdminLogin() {
-        // Login admin desativado temporariamente por segurança
-        return;
         const emailVal = (document.getElementById("adminEmailInput") || {}).value || "";
         const passVal = (document.getElementById("adminPasswordInput") || {}).value || "";
         const loginBtn = document.getElementById("adminLoginBtn");
@@ -2636,6 +2642,6 @@
     </div>
 
     <script src="public/app.js"></script>
-    <script src="public/notifications.js"></script>
+    <script src="notifications.js"></script>
   </body>
 </html>
